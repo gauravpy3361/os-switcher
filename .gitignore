@@ -7,3 +7,6 @@ dist/
 config.json
 C:\ProgramData\OSSwitcher\
 *.lock
+
+*.pyc
+*.zip
