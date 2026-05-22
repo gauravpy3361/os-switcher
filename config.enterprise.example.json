@@ -1,0 +1,24 @@
+{
+  "windows": {
+    "targetLabel": "Linux Workspace",
+    "rebootTimeoutSeconds": 5,
+    "stateDir": "C:\\ProgramData\\OSSwitcher"
+  },
+  "linux": {
+    "targetLabel": "Windows Boot Manager",
+    "rebootDelaySeconds": 5,
+    "stateDir": "/var/lib/os-switcher"
+  },
+  "state": {
+    "mode": "shared",
+    "shared": {
+      "windowsStateDir": "D:\\OSSwitcherState",
+      "linuxStateDir": "/mnt/os-switcher-state"
+    }
+  },
+  "safety": {
+    "requireConfirmation": true,
+    "pendingTransitionTimeoutMinutes": 10,
+    "maxBootFailures": 3
+  }
+}

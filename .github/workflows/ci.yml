@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip pytest
+      - run: pytest tests
+      - run: python -m py_compile tools/validate_config.py tools/os_switcher_core.py tools/doctor.py tools/make_release.py tools/release_check.py gui/os_switcher_gui.py
+      - run: python tools/release_check.py
+
+  linux-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y shellcheck shfmt bats python3
+      - run: shellcheck linux/*.sh
+      - run: shfmt -d linux/*.sh tests/linux_switch.bats
+      - run: bats tests/linux_switch.bats
+
+  windows-scripts:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Scope CurrentUser -Force -SkipPublisherCheck
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $paths = Get-ChildItem .\windows -Filter *.ps1
+          foreach ($path in $paths) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($path.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              throw "$($path.FullName) parse errors: $($errors | ForEach-Object Message -join '; ')"
+            }
+          }
+      - name: Run Pester
+        shell: pwsh
+        run: Invoke-Pester .\tests\windows_switch.Tests.ps1

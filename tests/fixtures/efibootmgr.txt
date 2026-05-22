@@ -1,0 +1,6 @@
+BootCurrent: 0003
+Timeout: 1 seconds
+BootOrder: 0003,0000,0001
+Boot0000* Windows Boot Manager	HD(1,GPT,aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee,0x800,0x32000)/File(\EFI\Microsoft\Boot\bootmgfw.efi)
+Boot0001* Linux Workspace	HD(1,GPT,aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee,0x800,0x32000)/File(\EFI\ubuntu\shimx64.efi)
+Boot0003* Ubuntu	HD(1,GPT,aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee,0x800,0x32000)/File(\EFI\ubuntu\grubx64.efi)

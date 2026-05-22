@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.os-switcher-test-state/
+dist/
+
+config.json
+C:\ProgramData\OSSwitcher\
+*.lock

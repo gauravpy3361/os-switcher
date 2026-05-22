@@ -1,0 +1,19 @@
+Firmware Boot Manager
+---------------------
+identifier              {fwbootmgr}
+displayorder            {bootmgr}
+                        {11111111-1111-1111-1111-111111111111}
+timeout                 1
+
+Windows Boot Manager
+--------------------
+identifier              {bootmgr}
+device                  partition=\Device\HarddiskVolume1
+description             Windows Boot Manager
+
+Firmware Application (101fffff)
+-------------------------------
+identifier              {11111111-1111-1111-1111-111111111111}
+device                  partition=\Device\HarddiskVolume1
+path                    \EFI\ubuntu\shimx64.efi
+description             Linux Workspace
