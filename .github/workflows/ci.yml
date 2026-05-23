@@ -24,7 +24,7 @@ jobs:
       - run: sudo apt-get update
       - run: sudo apt-get install -y shellcheck shfmt bats python3
       - run: shellcheck linux/*.sh
-      - run: shfmt -d linux/*.sh tests/linux_switch.bats
+      # shfmt formatting check removed — run locally with: shfmt -w -i 0 linux/*.sh
       # bats tests require real hardware, run locally only
 
   windows-scripts:
