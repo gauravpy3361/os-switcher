@@ -346,6 +346,13 @@ if ([string]::IsNullOrWhiteSpace($targetLabel)) {
 
 if (-not $FirmwareEntriesPath) {
     Assert-Administrator
+    $bitlockerStatus = & manage-bde -status C: 2>&1
+    if ($bitlockerStatus -like "*Protection On*") {
+        Write-Host "ERROR: BitLocker is ACTIVE on C:. Switching is blocked."
+        Write-Host "Disable BitLocker first: Control Panel > BitLocker Drive Encryption > Turn off BitLocker."
+        Write-Host "Switching with BitLocker active can permanently lock you out of Windows."
+        exit 1
+    }
 }
 Initialize-StateDir -Path $stateDir
 $lockPath = Enter-TransitionLock -StateDir $stateDir
