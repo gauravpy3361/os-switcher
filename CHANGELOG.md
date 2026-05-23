@@ -2,6 +2,25 @@
 
 All notable changes are documented here.
 
+## [0.4.0] - 2026-05-23
+### Added
+- linux/uninstall.sh: Full Linux uninstaller — removes install dir, symlink, and systemd service; preserves state directory
+- windows/uninstall.ps1: Full Windows uninstaller — removes install dir, Start Menu shortcut, and scheduled task; preserves state directory
+### Fixed
+- VERSION file now tracks git tag correctly (v0.3.2)
+- tools/doctor.py: sys.path fix so script runs from project root
+- tools/doctor.py: manage-bde absence now reports WARN not OK
+- tools/efi_backup.py: --restore crash on missing path argument
+- windows/switch-to-linux.ps1: manage-bde wrapped in try/catch for Windows Home
+- windows/switch-to-linux.ps1: config validation now enforces maxBootFailures >= 1 and rebootTimeoutSeconds >= 0
+- windows/install.ps1: suppressed duplicate boot-task output
+- windows/install-boot-success-task.ps1: task now fires only for installing user at RunLevel Limited
+- linux/install.sh: added rsync availability check; chmod all 6 linux scripts
+- tools/make_release.py: tests/ now excluded from release zip
+- tools/release_check.py: added 5 missing files to REQUIRED_FILES
+- README.md: corrected stale version number
+- CHANGELOG.md: backfilled missing v0.2.0 and v0.3.0 entries
+
 ## [0.3.1] - 2026-05-23
 ### Added
 - linux/install.sh: Single-script Linux installer with preflight checks

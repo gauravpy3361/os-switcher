@@ -76,6 +76,7 @@ fi
 chmod +x "$INSTALL_DIR/linux/switch-to-windows.sh"
 chmod +x "$INSTALL_DIR/linux/mark-boot-success.sh"
 chmod +x "$INSTALL_DIR/linux/rollback.sh"
+chmod +x "$INSTALL_DIR/linux/uninstall.sh"
 chmod +x "$INSTALL_DIR/linux/install-boot-success-service.sh"
 chmod +x "$INSTALL_DIR/linux/uninstall-boot-success-service.sh"
 chmod +x "$INSTALL_DIR/linux/status-boot-success-service.sh"

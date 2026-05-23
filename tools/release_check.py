@@ -28,11 +28,13 @@ REQUIRED_FILES = [
     "windows/uninstall-boot-success-task.ps1",
     "windows/install.ps1",
     "windows/rollback.ps1",
+    "windows/uninstall.ps1",
     "linux/install-boot-success-service.sh",
     "linux/status-boot-success-service.sh",
     "linux/uninstall-boot-success-service.sh",
     "linux/install.sh",
     "linux/rollback.sh",
+    "linux/uninstall.sh",
 ]
 
 
