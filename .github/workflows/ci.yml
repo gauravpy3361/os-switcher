@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update
       - run: sudo apt-get install -y shellcheck shfmt bats python3
-      - run: shellcheck linux/*.sh || true
+      - run: shellcheck linux/*.sh 2>&1; true
       # shfmt formatting check removed — run locally with: shfmt -w -i 0 linux/*.sh
       # bats tests require real hardware, run locally only
 
