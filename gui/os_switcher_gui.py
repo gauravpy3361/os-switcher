@@ -137,8 +137,8 @@ def main() -> int:
     if fail_file.exists():
         try:
             fail_count = int(fail_file.read_text(encoding="utf-8").strip())
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[os-switcher] WARNING: Could not read boot fail count: {exc}", file=sys.stderr)
 
     status = StringVar(value="Dry run mode")
     allow_reboot = BooleanVar(value=False)

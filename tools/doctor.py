@@ -216,8 +216,8 @@ def check_vendor_quirks(report: CheckReport) -> None:
                 text=True,
             )
             vendor = completed.stdout + completed.stderr
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[os-switcher] WARNING: Could not read vendor info (Windows): {exc}", file=sys.stderr)
     elif os_name == "linux":
         try:
             vendor_path = Path("/sys/class/dmi/id/board_vendor")
@@ -228,8 +228,8 @@ def check_vendor_quirks(report: CheckReport) -> None:
             if name_path.exists():
                 parts.append(name_path.read_text(encoding="utf-8").strip())
             vendor = " ".join(parts)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[os-switcher] WARNING: Could not read vendor info (Linux): {exc}", file=sys.stderr)
 
     if not vendor.strip():
         report.warn("Could not detect system vendor. Skipping quirk check.")
