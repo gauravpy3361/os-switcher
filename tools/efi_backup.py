@@ -117,6 +117,9 @@ def main() -> int:
             for b in backups:
                 print(f"  - {b}")
     elif args.restore:
+        if not args.restore.strip():
+            print("Error: --restore requires a valid file path.", file=sys.stderr)
+            return 1
         try:
             restore_efi_backup(args.restore)
         except Exception as exc:

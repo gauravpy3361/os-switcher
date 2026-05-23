@@ -118,7 +118,7 @@ if (-not (Test-Path -LiteralPath $configPath)) {
 # --- Step 7: Install boot-success scheduled task ---
 Write-Host ""
 Write-Host "Installing boot-success scheduled task ..."
-& powershell.exe -ExecutionPolicy Bypass -File (Join-Path $InstallDir "windows\install-boot-success-task.ps1")
+& powershell.exe -ExecutionPolicy Bypass -File (Join-Path $InstallDir "windows\install-boot-success-task.ps1") 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("ERROR: Failed to install boot-success scheduled task. Exit code: $LASTEXITCODE")
     exit 1

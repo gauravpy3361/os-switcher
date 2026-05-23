@@ -10,6 +10,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+
 from os_switcher_core import (
     EntryMatchError,
     find_unique_entry,
@@ -193,7 +195,7 @@ def check_bitlocker(report: CheckReport, os_name: str) -> None:
         else:
             report.ok("BitLocker is not active.")
     except Exception:
-        report.ok("BitLocker is not active.")
+        report.warn("Could not check BitLocker status — manage-bde not available on this Windows edition.")
 
 
 def check_vendor_quirks(report: CheckReport) -> None:

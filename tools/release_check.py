@@ -22,12 +22,17 @@ REQUIRED_FILES = [
     "docs/enterprise-readiness.md",
     "docs/release.md",
     ".github/workflows/ci.yml",
+    "tools/efi_backup.py",
     "windows/install-boot-success-task.ps1",
     "windows/status-boot-success-task.ps1",
     "windows/uninstall-boot-success-task.ps1",
+    "windows/install.ps1",
+    "windows/rollback.ps1",
     "linux/install-boot-success-service.sh",
     "linux/status-boot-success-service.sh",
     "linux/uninstall-boot-success-service.sh",
+    "linux/install.sh",
+    "linux/rollback.sh",
 ]
 
 

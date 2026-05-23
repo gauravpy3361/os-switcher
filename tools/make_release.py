@@ -14,6 +14,7 @@ DEFAULT_EXCLUDES = {
     ".pytest_cache",
     "__pycache__",
     "dist",
+    "tests",
 }
 EXCLUDED_FILES = {
     "config.json",

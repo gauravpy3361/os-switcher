@@ -95,6 +95,13 @@ function Validate-Config {
     [void][int]$Config.windows.rebootTimeoutSeconds
     [void][int]$Config.safety.pendingTransitionTimeoutMinutes
     [void][int]$Config.safety.maxBootFailures
+
+    if ([int]$Config.windows.rebootTimeoutSeconds -lt 0) {
+        throw "Config error: windows.rebootTimeoutSeconds must be >= 0."
+    }
+    if ([int]$Config.safety.maxBootFailures -lt 1) {
+        throw "Config error: safety.maxBootFailures must be >= 1."
+    }
 }
 
 function Get-EffectiveStateDir {
@@ -346,12 +353,16 @@ if ([string]::IsNullOrWhiteSpace($targetLabel)) {
 
 if (-not $FirmwareEntriesPath) {
     Assert-Administrator
-    $bitlockerStatus = & manage-bde -status C: 2>&1
-    if ($bitlockerStatus -like "*Protection On*") {
-        Write-Host "ERROR: BitLocker is ACTIVE on C:. Switching is blocked."
-        Write-Host "Disable BitLocker first: Control Panel > BitLocker Drive Encryption > Turn off BitLocker."
-        Write-Host "Switching with BitLocker active can permanently lock you out of Windows."
-        exit 1
+    try {
+        $bitlockerStatus = & manage-bde -status C: 2>&1
+        if ($bitlockerStatus -like "*Protection On*") {
+            Write-Host "ERROR: BitLocker is ACTIVE on C:. Switching is blocked."
+            Write-Host "Disable BitLocker first: Control Panel > BitLocker Drive Encryption > Turn off BitLocker."
+            Write-Host "Switching with BitLocker active can permanently lock you out of Windows."
+            exit 1
+        }
+    } catch {
+        Write-Warning "Could not check BitLocker status (manage-bde not available on this Windows edition). Proceeding with caution."
     }
 }
 # Perform EFI backup before switching (fails silently/warns but does not block)

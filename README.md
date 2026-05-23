@@ -4,7 +4,7 @@ One-click dual-boot switching for Windows and Linux using UEFI one-time boot tar
 
 This is not hot switching or virtualization. It sets the next boot entry, then performs a normal reboot.
 
-Current release: `0.1.0`
+Current release: `0.3.1`
 
 ## What This Builds
 

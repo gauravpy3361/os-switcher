@@ -10,6 +10,19 @@ All notable changes are documented here.
 - linux/rollback.sh: Recovery mode diagnostics and manual restore guide
 - windows/rollback.ps1: Recovery mode diagnostics and manual restore guide
 
+## [0.3.0] - 2026-05-23
+### Added
+- linux/rollback.sh: Recovery mode diagnostics and manual restore guide
+- windows/rollback.ps1: Recovery mode diagnostics and manual restore guide
+- tools/efi_backup.py: EFI backup utility, runs automatically before every switch
+
+## [0.2.0] - 2026-05-23
+### Added
+- tools/doctor.py: Python version, EFI layout, GRUB timeout, BitLocker, vendor quirk checks
+- windows/switch-to-linux.ps1: Hard BitLocker block before switching
+- linux/install.sh: Single-script Linux installer with preflight checks
+- windows/install.ps1: Single-script Windows installer with preflight checks
+
 ## [0.1.1] - 2026-05-23
 ### Fixed
 - linux/switch-to-windows.sh: Lock erasure concurrency bug (PID-based ownership check)

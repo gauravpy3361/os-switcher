@@ -41,6 +41,14 @@ if ! command -v efibootmgr >/dev/null 2>&1; then
 fi
 echo "OK   efibootmgr detected."
 
+# --- Step 3b: Check rsync ---
+if ! command -v rsync >/dev/null 2>&1; then
+	echo "ERROR: rsync is not installed." >&2
+	echo "Install it with: sudo dnf install rsync" >&2
+	exit 1
+fi
+echo "OK   rsync detected."
+
 # --- Step 4: Copy project files to /opt/os-switcher ---
 echo ""
 echo "Installing to $INSTALL_DIR ..."
@@ -68,6 +76,9 @@ fi
 chmod +x "$INSTALL_DIR/linux/switch-to-windows.sh"
 chmod +x "$INSTALL_DIR/linux/mark-boot-success.sh"
 chmod +x "$INSTALL_DIR/linux/rollback.sh"
+chmod +x "$INSTALL_DIR/linux/install-boot-success-service.sh"
+chmod +x "$INSTALL_DIR/linux/uninstall-boot-success-service.sh"
+chmod +x "$INSTALL_DIR/linux/status-boot-success-service.sh"
 echo "OK   Linux scripts marked executable."
 
 # --- Step 7: Install boot-success systemd service ---
