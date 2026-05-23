@@ -2,6 +2,23 @@
 
 All notable changes are documented here.
 
+## [1.0.0] - 2026-05-23
+### Added
+- Setup wizard for guided EFI configuration
+- GUI UX polish: threading, status display, recovery mode indicator
+- Uninstallers for Windows and Linux
+- Centralized file logging to state_dir/os-switcher.log
+- Non-English locale support for BitLocker detection (CIM-based)
+- wmic replaced with Get-CimInstance for vendor quirk detection
+- Stage 8 hardening: stale transition detection (--check-stale flag)
+- Power failure edge case documented in docs/safety.md
+- Full test coverage for efi_backup.py, doctor.py, rollback scripts
+### Fixed
+- GitHub Actions CI: all 3 jobs now passing cleanly
+- shellcheck SC2012 warning in rollback.sh
+- EM dash encoding issue in rollback.ps1 (PowerShell 5.1 compatibility)
+- Test mock tuple fix for check_python_version test
+
 ## [0.4.0] - 2026-05-23
 ### Added
 - linux/uninstall.sh: Full Linux uninstaller — removes install dir, symlink, and systemd service; preserves state directory
