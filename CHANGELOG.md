@@ -2,6 +2,13 @@
 
 All notable changes are documented here.
 
+## [1.1.0] - 2026-05-23
+### Added
+- windows/OSSwitcher-Setup.iss: Professional Inno Setup Windows installer
+- tools/build_installer.py: Build script for Windows .exe installer
+- linux/build-appimage.sh: Linux AppImage builder for single-file distribution
+- tools/setup_wizard.py: Elevation check (clear error if not admin/root)
+
 ## [1.0.0] - 2026-05-23
 ### Added
 - Setup wizard for guided EFI configuration
