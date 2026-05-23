@@ -354,6 +354,16 @@ if (-not $FirmwareEntriesPath) {
         exit 1
     }
 }
+# Perform EFI backup before switching (fails silently/warns but does not block)
+try {
+    $backupScript = Join-Path $PSScriptRoot "..\tools\efi_backup.py"
+    & python $backupScript --config $ConfigPath --backup 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "EFI backup failed, but switching will continue."
+    }
+} catch {
+    Write-Warning "EFI backup failed, but switching will continue: $_"
+}
 Initialize-StateDir -Path $stateDir
 $lockPath = Enter-TransitionLock -StateDir $stateDir
 $scriptExitCode = 0

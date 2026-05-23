@@ -87,6 +87,11 @@ cleanup_lock() {
 }
 trap cleanup_lock EXIT
 
+# Perform EFI backup before switching (fails silently/warns but does not block)
+if ! python3 "$SCRIPT_DIR/../tools/efi_backup.py" --config "$CONFIG_PATH" --backup >/dev/null 2>&1; then
+	echo "WARNING: EFI backup failed, but switching will continue." >&2
+fi
+
 PENDING_PATH="$STATE_DIR/pending-transition.json"
 STAGED_PATH="$STATE_DIR/transition-staged.json"
 FAIL_COUNT_PATH="$STATE_DIR/boot-fail-count.txt"
