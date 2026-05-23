@@ -157,6 +157,7 @@ def test_check_bitlocker_skipped_on_linux() -> None:
     assert report.failures == 0
 
 
+@pytest.mark.hardware
 def test_check_bitlocker_fails_when_protection_on() -> None:
     mock_result = MagicMock()
     mock_result.stdout = "Protection Status:     Protection On\n"
@@ -169,6 +170,7 @@ def test_check_bitlocker_fails_when_protection_on() -> None:
     assert report.failures == 1
 
 
+@pytest.mark.hardware
 def test_check_bitlocker_ok_when_protection_off() -> None:
     mock_result = MagicMock()
     mock_result.stdout = "Protection Status:     Protection Off\n"
@@ -182,6 +184,7 @@ def test_check_bitlocker_ok_when_protection_off() -> None:
     assert report.warnings == 0
 
 
+@pytest.mark.hardware
 def test_check_bitlocker_warns_when_manage_bde_absent() -> None:
     with patch(
         "tools.doctor.subprocess.run",

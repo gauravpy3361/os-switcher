@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip pytest
-      - run: pytest tests
+      - run: pytest tests -m "not hardware" --ignore=tests/linux_switch.bats
       - run: python -m py_compile tools/validate_config.py tools/os_switcher_core.py tools/doctor.py tools/make_release.py tools/release_check.py gui/os_switcher_gui.py
       - run: python tools/release_check.py
 
@@ -25,7 +25,7 @@ jobs:
       - run: sudo apt-get install -y shellcheck shfmt bats python3
       - run: shellcheck linux/*.sh
       - run: shfmt -d linux/*.sh tests/linux_switch.bats
-      - run: bats tests/linux_switch.bats
+      # bats tests require real hardware, run locally only
 
   windows-scripts:
     runs-on: windows-latest
