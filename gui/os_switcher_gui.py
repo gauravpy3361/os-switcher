@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
-from tkinter import BooleanVar, Button, Checkbutton, Label, StringVar, Tk, messagebox
-
+from tkinter import BooleanVar, Button, Checkbutton, Frame, Label, StringVar, Tk, messagebox
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "config.json"
@@ -68,7 +69,6 @@ def build_command(allow_reboot: bool, force: bool) -> list[str]:
         command.append("--force")
 
     if allow_reboot:
-        import os
         if hasattr(os, "geteuid") and os.geteuid() != 0:
             if not shutil.which("pkexec"):
                 raise RuntimeError(
@@ -80,6 +80,17 @@ def build_command(allow_reboot: bool, force: bool) -> list[str]:
     return command
 
 
+def get_state_dir(config: dict) -> Path:
+    os_name = current_platform()
+    if config.get("state_mode") == "shared":
+        if os_name == "windows":
+            return Path(os.path.expandvars(config["windows_effective_state_dir"]))
+        return Path(os.path.expandvars(config["linux_effective_state_dir"]))
+    if os_name == "windows":
+        return Path(os.path.expandvars(config["windows_effective_state_dir"]))
+    return Path(os.path.expandvars(config["linux_effective_state_dir"]))
+
+
 def button_text(config: dict) -> str:
     os_name = current_platform()
     if os_name == "windows":
@@ -87,26 +98,60 @@ def button_text(config: dict) -> str:
     return f"Return to {config['linux']['targetLabel']}"
 
 
+def edit_config() -> None:
+    if current_platform() == "windows":
+        os.startfile(CONFIG_PATH)
+    else:
+        subprocess.Popen(["xdg-open", str(CONFIG_PATH)])
+
+
+def get_rollback_command() -> str:
+    if current_platform() == "windows":
+        return f'powershell -ExecutionPolicy Bypass -File "{ROOT / "windows" / "rollback.ps1"}"'
+    return f'sudo bash "{ROOT / "linux" / "rollback.sh"}"'
+
+
 def main() -> int:
     try:
-        config = load_config()
-        label_text = button_text(config)
+        raw_config = load_config()
+        config = validate(CONFIG_PATH)
+        label_text = button_text(raw_config)
+        state_dir = get_state_dir(config)
     except Exception as exc:
         print(f"[os-switcher] ERROR: {exc}", file=sys.stderr)
+        root = Tk()
+        root.withdraw()
         messagebox.showerror("OS Switcher", str(exc))
         return 1
 
     root = Tk()
     root.title("OS Switcher")
-    root.geometry("460x220")
+    root.geometry("480x280")
     root.resizable(False, False)
+
+    is_recovery = (state_dir / "recovery-mode.json").exists()
+    is_pending = (state_dir / "pending-transition.json").exists()
+    
+    fail_count = 0
+    fail_file = state_dir / "boot-fail-count.txt"
+    if fail_file.exists():
+        try:
+            fail_count = int(fail_file.read_text(encoding="utf-8").strip())
+        except Exception:
+            pass
 
     status = StringVar(value="Dry run mode")
     allow_reboot = BooleanVar(value=False)
 
-    def run_switch() -> None:
-        switch_button.configure(state="disabled")
-        status.set("Running command")
+    def on_allow_reboot_change(*args: object) -> None:
+        if allow_reboot.get():
+            status.set("Ready to reboot")
+        else:
+            status.set("Dry run mode")
+            
+    allow_reboot.trace_add("write", on_allow_reboot_change)
+
+    def run_switch_thread() -> None:
         try:
             command = build_command(allow_reboot.get(), force=False)
             completed = subprocess.run(
@@ -120,26 +165,73 @@ def main() -> int:
             output = "\n".join(
                 part for part in [completed.stdout.strip(), completed.stderr.strip()] if part
             )
-            if completed.returncode == 0:
-                status.set("Command completed")
-                messagebox.showinfo("OS Switcher", output or "Command completed.")
-            else:
-                status.set("Command failed")
-                messagebox.showerror("OS Switcher", output or "Command failed.")
+            
+            def on_complete() -> None:
+                if completed.returncode == 0:
+                    status.set("Command completed")
+                    messagebox.showinfo("OS Switcher", output or "Command completed.")
+                else:
+                    status.set("Command failed")
+                    messagebox.showerror("OS Switcher", output or "Command failed.")
+                switch_button.configure(state="normal")
+                
+            root.after(0, on_complete)
         except Exception as exc:
             print(f"[os-switcher] ERROR: {exc}", file=sys.stderr)
-            status.set("Command failed")
-            messagebox.showerror("OS Switcher", str(exc))
-        finally:
-            switch_button.configure(state="normal")
+            def on_error() -> None:
+                status.set("Command failed")
+                messagebox.showerror("OS Switcher", str(exc))
+                switch_button.configure(state="normal")
+            root.after(0, on_error)
 
-    Label(root, text="OS Switcher", font=("Segoe UI", 18, "bold")).pack(pady=(22, 4))
-    Label(root, textvariable=status, font=("Segoe UI", 10)).pack(pady=(0, 16))
-    switch_button = Button(
-        root, text=label_text, font=("Segoe UI", 14), width=28, height=2, command=run_switch
-    )
+    def run_switch() -> None:
+        switch_button.configure(state="disabled")
+        status.set("Running command...")
+        threading.Thread(target=run_switch_thread, daemon=True).start()
+
+    Label(root, text="OS Switcher", font=("Segoe UI", 18, "bold")).pack(pady=(16, 4))
+
+    status_text = ""
+    status_color = "black"
+    if is_recovery:
+        status_text = "RECOVERY MODE ACTIVE"
+        status_color = "red"
+    elif is_pending:
+        status_text = "Pending transition in progress"
+        status_color = "orange"
+    elif fail_count > 0:
+        status_text = f"Boot failure count: {fail_count}"
+        status_color = "orange"
+    else:
+        status_text = "System health normal"
+        status_color = "green"
+
+    Label(root, text=status_text, fg=status_color, font=("Segoe UI", 10, "bold")).pack(pady=(0, 10))
+
+    if is_recovery:
+        def show_rollback() -> None:
+            messagebox.showinfo(
+                "Rollback Instructions",
+                "Automated switching is blocked due to consecutive boot failures.\n\n"
+                f"Please run the rollback script in a terminal:\n\n{get_rollback_command()}"
+            )
+        Button(root, text="View Rollback Instructions", fg="red", command=show_rollback).pack(pady=(0, 10))
+        switch_button = Button(
+            root, text=label_text, font=("Segoe UI", 14), width=28, height=2, state="disabled"
+        )
+    else:
+        switch_button = Button(
+            root, text=label_text, font=("Segoe UI", 14), width=28, height=2, command=run_switch
+        )
+
     switch_button.pack()
-    Checkbutton(root, text="Allow reboot", variable=allow_reboot).pack(pady=(12, 0))
+
+    bottom_frame = Frame(root)
+    bottom_frame.pack(pady=(12, 0))
+    Checkbutton(bottom_frame, text="Allow reboot", variable=allow_reboot).pack(side="left", padx=(0, 20))
+    Button(bottom_frame, text="Edit Config", command=edit_config).pack(side="left")
+
+    Label(root, textvariable=status, font=("Segoe UI", 9), fg="gray").pack(pady=(10, 0))
 
     root.mainloop()
     return 0

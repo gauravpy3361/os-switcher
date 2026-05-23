@@ -180,13 +180,17 @@ def check_bitlocker(report: CheckReport, os_name: str) -> None:
 
     try:
         completed = subprocess.run(
-            ["manage-bde", "-status", "C:"],
+            ["powershell", "-NoProfile", "-Command", "[int](Get-BitLockerVolume -MountPoint C: -ErrorAction Stop).ProtectionStatus"],
             check=False,
             capture_output=True,
             text=True,
         )
-        output = completed.stdout + completed.stderr
-        if "Protection On" in output:
+        if completed.returncode != 0:
+            report.warn("Could not check BitLocker status — Get-BitLockerVolume not available on this Windows edition.")
+            return
+
+        status = int(completed.stdout.strip())
+        if status == 1:
             report.fail(
                 "BitLocker is ACTIVE on C:. You MUST disable it before switching OSes. "
                 "Go to: Control Panel > BitLocker Drive Encryption > Turn off BitLocker. "
@@ -195,7 +199,7 @@ def check_bitlocker(report: CheckReport, os_name: str) -> None:
         else:
             report.ok("BitLocker is not active.")
     except Exception:
-        report.warn("Could not check BitLocker status — manage-bde not available on this Windows edition.")
+        report.warn("Could not check BitLocker status — PowerShell command failed.")
 
 
 def check_vendor_quirks(report: CheckReport) -> None:
@@ -204,7 +208,7 @@ def check_vendor_quirks(report: CheckReport) -> None:
     if os_name == "windows":
         try:
             completed = subprocess.run(
-                ["wmic", "baseboard", "get", "Manufacturer,Product", "/value"],
+                ["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_BaseBoard | ForEach-Object { $_.Manufacturer + ' ' + $_.Product }"],
                 check=False,
                 capture_output=True,
                 text=True,

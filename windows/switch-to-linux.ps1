@@ -354,15 +354,15 @@ if ([string]::IsNullOrWhiteSpace($targetLabel)) {
 if (-not $FirmwareEntriesPath) {
     Assert-Administrator
     try {
-        $bitlockerStatus = & manage-bde -status C: 2>&1
-        if ($bitlockerStatus -like "*Protection On*") {
+        $bitlockerStatus = [int](Get-BitLockerVolume -MountPoint C: -ErrorAction Stop).ProtectionStatus
+        if ($bitlockerStatus -eq 1) {
             Write-Host "ERROR: BitLocker is ACTIVE on C:. Switching is blocked."
             Write-Host "Disable BitLocker first: Control Panel > BitLocker Drive Encryption > Turn off BitLocker."
             Write-Host "Switching with BitLocker active can permanently lock you out of Windows."
             exit 1
         }
     } catch {
-        Write-Warning "Could not check BitLocker status (manage-bde not available on this Windows edition). Proceeding with caution."
+        Write-Warning "Could not check BitLocker status (Get-BitLockerVolume not available on this Windows edition). Proceeding with caution."
     }
 }
 # Perform EFI backup before switching (fails silently/warns but does not block)
@@ -376,6 +376,11 @@ try {
     Write-Warning "EFI backup failed, but switching will continue: $_"
 }
 Initialize-StateDir -Path $stateDir
+
+$logPath = Join-Path $stateDir "os-switcher.log"
+Start-Transcript -Path $logPath -Append | Out-Null
+Write-Host "[$(Get-Date -Format 'u')] Starting Windows to Linux switch..."
+
 $lockPath = Enter-TransitionLock -StateDir $stateDir
 $scriptExitCode = 0
 

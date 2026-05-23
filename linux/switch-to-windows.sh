@@ -95,6 +95,11 @@ fi
 PENDING_PATH="$STATE_DIR/pending-transition.json"
 STAGED_PATH="$STATE_DIR/transition-staged.json"
 FAIL_COUNT_PATH="$STATE_DIR/boot-fail-count.txt"
+
+mkdir -p "$STATE_DIR"
+exec > >(tee -a "$STATE_DIR/os-switcher.log") 2>&1
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting Linux to Windows switch..."
+
 RECOVERY_PATH="$STATE_DIR/recovery-mode.json"
 if [[ -f "$RECOVERY_PATH" ]]; then
 	echo "OS Switcher is in recovery mode. Inspect $RECOVERY_PATH, fix boot health, then run mark-boot-success." >&2

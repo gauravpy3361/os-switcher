@@ -4,256 +4,119 @@ One-click dual-boot switching for Windows and Linux using UEFI one-time boot tar
 
 This is not hot switching or virtualization. It sets the next boot entry, then performs a normal reboot.
 
-Current release: `0.3.1`
+Current release: `0.4.0`
 
-## What This Builds
+## Features
 
-- Windows -> Linux: PowerShell script sets firmware `bootsequence`, then reboots.
-- Linux -> Windows: Bash script sets EFI `BootNext`, then reboots.
-- Optional Python GUI: one large button that calls the right script for the current OS.
-- Config file: target labels and safety behavior live in one place.
-- Persistent transition state: lock files prevent duplicate requests, and pending transitions must be cleared after a successful boot.
-
-## Repository Layout
-
-```text
-config.example.json
-config.enterprise.example.json
-CHANGELOG.md
-CONTRIBUTING.md
-docs/
-  enterprise-readiness.md
-  release.md
-  setup.md
-  safety.md
-gui/
-  os_switcher_gui.py
-linux/
-  install-boot-success-service.sh
-  mark-boot-success.sh
-  status-boot-success-service.sh
-  switch-to-windows.sh
-  uninstall-boot-success-service.sh
-spec/
-  os_switcher.tla
-tests/
-  fixtures/
-  linux_switch.bats
-  windows_switch.Tests.ps1
-tools/
-  doctor.py
-  make_release.py
-  os_switcher_core.py
-  validate_config.py
-windows/
-  install-boot-success-task.ps1
-  mark-boot-success.ps1
-  status-boot-success-task.ps1
-  switch-to-linux.ps1
-  uninstall-boot-success-task.ps1
-```
+- **Safe:** Performs preflight checks (Python, EFI layout, BitLocker) before touching firmware.
+- **Fail-safe:** Backs up EFI entries before every switch. If the boot fails 3 times, it enters Recovery Mode to prevent further automated tampering.
+- **Persistent State:** Tracks transitions across reboots using a shared state directory, ensuring the target OS accurately acknowledges a successful boot.
+- **Cross-Platform Installers:** Single-script installers for both Windows and Linux, including systemd and Scheduled Task setup for automated boot-success marking.
+- **GUI:** Optional, lightweight Python GUI for a simple one-click switch experience.
 
 ## First-Time Setup
 
-Copy the example config:
+1. **Clone or Download** the latest release (`os-switcher-x.y.z.zip`) and extract it.
 
+2. **Windows Installation**
+   Run an elevated PowerShell session:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\windows\install.ps1
+   ```
+   This installs OS Switcher to `C:\Program Files\OSSwitcher`, sets up the boot-success Scheduled Task, and creates a Start Menu shortcut.
+
+3. **Linux Installation**
+   Run as root:
+   ```bash
+   sudo bash ./linux/install.sh
+   ```
+   This installs OS Switcher to `/opt/os-switcher`, sets up the boot-success systemd service, and creates a `/usr/local/bin/os-switcher` symlink.
+
+4. **Configuration**
+   On Windows, inspect firmware entries:
+   ```powershell
+   bcdedit /enum firmware
+   ```
+   On Linux, inspect EFI entries:
+   ```bash
+   sudo efibootmgr -v
+   ```
+   Edit the installed `config.json` (e.g. `C:\Program Files\OSSwitcher\config.json` or `/opt/os-switcher/config.json`) so the Windows-side `targetLabel` matches the Linux firmware application label, and the Linux-side `targetLabel` matches the Windows EFI label. 
+   
+   *Tip:* For real daily use, set `state.mode` to `shared` and map `state.shared.windowsStateDir` and `state.shared.linuxStateDir` to the same durable storage location accessible from both OSes (e.g. an exFAT or FAT32 partition).
+
+5. **Run the Doctor**
+   Verify your setup is healthy before real use:
+   ```powershell
+   # On Windows
+   python "C:\Program Files\OSSwitcher\tools\doctor.py" --config "C:\Program Files\OSSwitcher\config.json"
+   ```
+   ```bash
+   # On Linux
+   python3 /opt/os-switcher/tools/doctor.py --config /opt/os-switcher/config.json
+   ```
+
+## Daily Use
+
+You can use the **Start Menu shortcut (Windows)** or run `os-switcher` (Linux) to open the GUI. Click the "Switch to ..." button, and it will set the EFI target and reboot.
+
+For command-line users:
 ```powershell
-Copy-Item .\config.example.json .\config.json
+# Windows
+powershell -ExecutionPolicy Bypass -File "C:\Program Files\OSSwitcher\windows\switch-to-linux.ps1" -Reboot
 ```
-
-For public/enterprise deployment, start from the shared-state example instead:
-
-```powershell
-Copy-Item .\config.enterprise.example.json .\config.json
-```
-
-On Windows, inspect firmware entries:
-
-```powershell
-bcdedit /enum firmware
-```
-
-On Linux, inspect EFI entries:
-
 ```bash
-sudo efibootmgr -v
+# Linux
+sudo /opt/os-switcher/linux/switch-to-windows.sh --reboot
 ```
 
-Update `config.json` so the Windows-side target matches the Linux firmware application label, and the Linux-side target matches the Windows EFI label.
+## Safety & Recovery Mode
 
-For development, `state.mode` can stay as `local`. For real daily use, set it to `shared` and map `state.shared.windowsStateDir` and `state.shared.linuxStateDir` to the same durable storage location from each OS. This lets the target OS clear the exact pending transition created by the source OS.
+Before any EFI manipulation, OS Switcher automatically backs up your EFI state to your `stateDir` (e.g. `efi-backup-20260520-120000.txt`).
 
-Run the doctor in offline mode before touching firmware:
-
+If OS Switcher detects consecutive failed boots (default 3), it will enter **Recovery Mode** and block automated switching.
+To view recovery instructions and the location of your newest EFI backup:
 ```powershell
-python .\tools\doctor.py --config .\config.json --offline
+# Windows
+powershell -ExecutionPolicy Bypass -File "C:\Program Files\OSSwitcher\windows\rollback.ps1"
+```
+```bash
+# Linux
+sudo /opt/os-switcher/linux/rollback.sh
 ```
 
-For a production-readiness check, use:
+## Uninstallation
 
+To cleanly remove OS Switcher:
 ```powershell
-python .\tools\doctor.py --config .\config.json --production --check-writable --offline
+# Windows (Elevated PowerShell)
+powershell -ExecutionPolicy Bypass -File "C:\Program Files\OSSwitcher\windows\uninstall.ps1"
 ```
-
-On Linux, make the script executable once:
-
 ```bash
-chmod +x ./linux/*.sh
+# Linux (root)
+sudo bash /opt/os-switcher/linux/uninstall.sh
 ```
-
-## Dry Run
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\switch-to-linux.ps1 -DryRun
-```
-
-Run this from an elevated PowerShell session because Windows may block firmware entry enumeration otherwise.
-
-Linux:
-
-```bash
-./linux/switch-to-windows.sh --dry-run
-```
-
-## Real Switch
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\switch-to-linux.ps1 -Reboot
-```
-
-Linux:
-
-```bash
-sudo ./linux/switch-to-windows.sh --reboot
-```
-
-## GUI
-
-The GUI is intentionally thin. It delegates to the platform script.
-
-```bash
-python gui/os_switcher_gui.py
-```
-
-Use the checkbox to allow reboot. Without it, the GUI performs a dry run.
-
-In GUI mode, real reboot requests automatically skip the typed terminal confirmation so the subprocess cannot block waiting for stdin.
-
-## Boot Success Marking
-
-After a successful boot into the target OS, mark that boot as healthy. This clears the pending transition state.
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\mark-boot-success.ps1
-```
-
-Linux:
-
-```bash
-./linux/mark-boot-success.sh
-```
-
-For day-to-day use, wire these into Task Scheduler on Windows and a user or systemd service on Linux.
-
-Install automatic boot-success marking:
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\install-boot-success-task.ps1
-```
-
-Linux:
-
-```bash
-sudo ./linux/install-boot-success-service.sh
-```
-
-Check installation status:
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\status-boot-success-task.ps1
-```
-
-Linux:
-
-```bash
-./linux/status-boot-success-service.sh
-```
-
-Uninstall automatic boot-success marking:
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\uninstall-boot-success-task.ps1
-```
-
-Linux:
-
-```bash
-sudo ./linux/uninstall-boot-success-service.sh
-```
-
-The boot-success scripts are quiet no-ops when there is no pending, failed, or recovery transition state to inspect.
-
-Boot-success marking is target-aware. If Windows boots while the pending target was Linux, Windows records a failed transition instead of clearing it as success. The same applies in reverse on Linux.
-
-Recovery and failure state are not cleared automatically. After you inspect boot health, clear them explicitly:
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\mark-boot-success.ps1 -ClearRecovery
-```
-
-Linux:
-
-```bash
-./linux/mark-boot-success.sh --clear-recovery
-```
+*Note: Uninstallation preserves your state directory in case you need to access your EFI backups or transition history.*
 
 ## Important Safety Notes
 
 Read [docs/safety.md](docs/safety.md) before enabling real reboot behavior.
-
 For public or enterprise use, read [docs/enterprise-readiness.md](docs/enterprise-readiness.md) and [docs/release.md](docs/release.md).
 
 ## Testing
 
-Python tests:
-
 ```bash
+# Python tests
 pytest
 python tools/release_check.py
-```
 
-Linux script tests:
-
-```bash
+# Linux script tests
 bats tests/linux_switch.bats
-```
 
-Windows script tests:
-
-```powershell
+# Windows script tests
 Invoke-Pester .\tests\windows_switch.Tests.ps1
-```
-
-Create a release zip:
-
-```powershell
-python .\tools\make_release.py
 ```
 
 ## Validation Ownership
 
-Linux and the GUI use [tools/validate_config.py](tools/validate_config.py). Windows switching keeps a native PowerShell validator inside [windows/switch-to-linux.ps1](windows/switch-to-linux.ps1) so the Windows path does not require Python. The doctor and tests share parser helpers in [tools/os_switcher_core.py](tools/os_switcher_core.py). When adding config fields, update both validators in the same change.
+Linux and the GUI use [tools/validate_config.py](tools/validate_config.py). Windows switching keeps a native PowerShell validator inside [windows/switch-to-linux.ps1](windows/switch-to-linux.ps1) so the Windows path does not require Python. When adding config fields, update both validators in the same change.
