@@ -34,10 +34,10 @@ def test_check_python_version_passes_on_current() -> None:
 
 def test_check_python_version_fails_below_38(monkeypatch: pytest.MonkeyPatch) -> None:
     import sys
+    from collections import namedtuple
 
-    fake_version = MagicMock()
-    fake_version.__lt__ = lambda self, other: True  # always < (3, 8)
-    monkeypatch.setattr(sys, "version_info", (2, 7, 18))
+    FakeVersion = namedtuple('version_info', ['major', 'minor', 'micro', 'releaselevel', 'serial'])
+    monkeypatch.setattr(sys, "version_info", FakeVersion(2, 7, 18, 'final', 0))
 
     report = CheckReport()
     check_python_version(report)

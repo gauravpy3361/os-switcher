@@ -1,4 +1,5 @@
-param(
+﻿param(
+    [Alias("config")]
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config.json")
 )
 
@@ -62,7 +63,7 @@ if ($null -ne $backupFile) {
 }
 
 Write-Host ""
-Write-Host "RECOVERY MODE ACTIVE — Automatic rollback not possible (EFI manipulation is unsafe)."
+Write-Host "RECOVERY MODE ACTIVE - Automatic rollback not possible (EFI manipulation is unsafe)."
 Write-Host "Please manually restore your boot entries using bcdedit."
 Write-Host "Your last EFI backup is at: $newestBackup"
 exit 1

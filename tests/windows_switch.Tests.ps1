@@ -157,13 +157,18 @@ Describe "Windows boot success marker" {
 }
 
 Describe "Windows rollback script" {
-    It "exits 0 and says no recovery when recovery-mode.json is absent" {
-        $stateDir = Join-Path $TestDrive "state-no-recovery"
+    BeforeEach {
+        $stateDir = Join-Path $TestDrive "rollback-state"
+        if (Test-Path -LiteralPath $stateDir) {
+            Remove-Item -LiteralPath $stateDir -Recurse -Force | Out-Null
+        }
         New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
-        $configPath = Join-Path $TestDrive "config-no-recovery.json"
+        $configPath = Join-Path $TestDrive "rollback-config.json"
         New-TestConfig -StateDir $stateDir | Set-Content -LiteralPath $configPath -Encoding UTF8
+    }
 
-        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript -ConfigPath $configPath 2>&1
+    It "exits 0 and says no recovery when recovery-mode.json is absent" {
+        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript --config $configPath 2>&1
         $exitCode = $LASTEXITCODE
 
         $exitCode | Should -Be 0
@@ -171,14 +176,10 @@ Describe "Windows rollback script" {
     }
 
     It "exits 1 and prints RECOVERY MODE ACTIVE when recovery-mode.json exists" {
-        $stateDir = Join-Path $TestDrive "state-recovery"
-        New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
-        $configPath = Join-Path $TestDrive "config-recovery.json"
-        New-TestConfig -StateDir $stateDir | Set-Content -LiteralPath $configPath -Encoding UTF8
         '{"recoveryAt":"2026-05-20T00:00:00Z","reason":"consecutive boot failures"}' |
             Set-Content -LiteralPath (Join-Path $stateDir "recovery-mode.json") -Encoding UTF8
 
-        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript -ConfigPath $configPath 2>&1
+        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript --config $configPath 2>&1
         $exitCode = $LASTEXITCODE
 
         $exitCode | Should -Be 1
@@ -186,29 +187,21 @@ Describe "Windows rollback script" {
     }
 
     It "prints newest backup path when an EFI backup file exists" {
-        $stateDir = Join-Path $TestDrive "state-backup"
-        New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
-        $configPath = Join-Path $TestDrive "config-backup.json"
-        New-TestConfig -StateDir $stateDir | Set-Content -LiteralPath $configPath -Encoding UTF8
         '{"recoveryAt":"2026-05-20T00:00:00Z"}' |
             Set-Content -LiteralPath (Join-Path $stateDir "recovery-mode.json") -Encoding UTF8
         "BootCurrent: 0001`nBoot0000* Windows" |
             Set-Content -LiteralPath (Join-Path $stateDir "efi-backup-20260520-120000.txt") -Encoding UTF8
 
-        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript -ConfigPath $configPath 2>&1
+        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript --config $configPath 2>&1
 
         ($output -join "`n") | Should -Match "efi-backup-20260520-120000.txt"
     }
 
     It "prints no-backup message when no EFI backup files exist" {
-        $stateDir = Join-Path $TestDrive "state-nobackup"
-        New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
-        $configPath = Join-Path $TestDrive "config-nobackup.json"
-        New-TestConfig -StateDir $stateDir | Set-Content -LiteralPath $configPath -Encoding UTF8
         '{"recoveryAt":"2026-05-20T00:00:00Z"}' |
             Set-Content -LiteralPath (Join-Path $stateDir "recovery-mode.json") -Encoding UTF8
 
-        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript -ConfigPath $configPath 2>&1
+        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:RollbackScript --config $configPath 2>&1
 
         ($output -join "`n") | Should -Match "No backup files found"
     }
