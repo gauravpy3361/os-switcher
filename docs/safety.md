@@ -53,6 +53,31 @@ Failure and recovery state are not cleared automatically. After you inspect boot
 
 The Linux installer uses a stable wrapper at `/usr/local/lib/os-switcher/mark-boot-success-wrapper.sh` so project paths with spaces do not affect the systemd unit.
 
+## Power Failure & Stale Transitions
+
+In rare circumstances, a **graceful power failure** can occur. This happens when the switch script successfully configures the UEFI variable (`BootSequence` on Windows or `BootNext` on Linux) and writes `pending-transition.json`, but the system loses power or fails to shut down before a proper reboot can occur.
+
+If this happens:
+1. The transition files remain in the `pending` state permanently.
+2. The target OS is never booted, so the transition cannot be marked as successful or failed by the success monitoring scripts.
+3. Future switch commands are blocked because a transition is apparently already in progress.
+
+### Diagnosis & Recovery
+
+You can diagnose this scenario using the preflight doctor tool:
+
+```bash
+python tools/doctor.py --check-stale [MINUTES]
+```
+
+If a pending transition is older than the threshold (defaults to `safety.pendingTransitionTimeoutMinutes` in `config.json`), the doctor will report a warning explaining that a stale transition was detected.
+
+To recover from this state:
+- If the reboot never happened and you want to abort the switch, run the rollback script to clean up transition files and restore your original firmware entries:
+  - **Windows**: `powershell -ExecutionPolicy Bypass -File "windows/rollback.ps1"`
+  - **Linux**: `sudo bash "linux/rollback.sh"`
+- Alternatively, you can run `mark-boot-success` manually on the target platform to mark the transition as complete.
+
 ## What The Scripts Do Not Do Yet
 
 - They do not repair broken boot entries.

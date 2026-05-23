@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import datetime
+import json
 import os
 import platform
 import subprocess
@@ -242,6 +244,48 @@ def check_vendor_quirks(report: CheckReport) -> None:
         report.ok("No known firmware quirks detected for this vendor.")
 
 
+def check_stale_transitions(
+    report: CheckReport,
+    state_dir: Path,
+    threshold_minutes: int,
+) -> None:
+    pending_path = state_dir / "pending-transition.json"
+    if not pending_path.exists():
+        return
+
+    try:
+        with pending_path.open("r", encoding="utf-8") as handle:
+            pending = json.load(handle)
+
+        started_at_str = pending.get("startedAt")
+        if not started_at_str:
+            report.fail(f"Pending transition file '{pending_path}' is missing 'startedAt' field.")
+            return
+
+        if started_at_str.endswith("Z"):
+            started_at_str = started_at_str[:-1] + "+00:00"
+
+        started_at = datetime.datetime.fromisoformat(started_at_str)
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        age_seconds = (now - started_at).total_seconds()
+        age_minutes = age_seconds / 60.0
+
+        if age_minutes > threshold_minutes:
+            report.warn(
+                f"A stale pending transition was detected (started {age_minutes:.1f} minutes ago, threshold is {threshold_minutes} minutes).\n"
+                "This indicates a potential graceful power failure: UEFI boot sequences were set successfully,\n"
+                "but the system did not reboot to apply them (e.g., lost power mid-transition).\n"
+                "To resolve this, run mark-boot-success to clear the stale pending transition state."
+            )
+        else:
+            report.ok(f"Pending transition is fresh (age: {age_minutes:.1f} minutes).")
+    except json.JSONDecodeError as exc:
+        report.fail(f"Pending transition file '{pending_path}' is not valid JSON: {exc}")
+    except Exception as exc:
+        report.fail(f"Error checking stale transition: {exc}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "config.json")
@@ -257,6 +301,13 @@ def main() -> int:
         "--check-writable",
         action="store_true",
         help="create the current platform state directory and test write access",
+    )
+    parser.add_argument(
+        "--check-stale",
+        nargs="?",
+        type=int,
+        const=-1,
+        help="check for stale pending transitions older than N minutes (defaults to safety.pendingTransitionTimeoutMinutes)",
     )
     args = parser.parse_args()
 
@@ -291,6 +342,16 @@ def main() -> int:
             report.fail(f"State directory is not writable: {exc}")
         else:
             report.ok("State directory is writable.")
+
+    if args.check_stale is not None:
+        threshold = args.check_stale
+        if threshold == -1:
+            threshold = int(config["pending_transition_timeout_minutes"])
+        check_stale_transitions(
+            report,
+            Path(os.path.expandvars(effective_state_dir)),
+            threshold,
+        )
 
     check_firmware(report, args, args.platform, config)
     check_python_version(report)

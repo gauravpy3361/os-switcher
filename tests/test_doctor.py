@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import datetime
+import json
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -13,6 +15,7 @@ from tools.doctor import (
     check_efi_layout,
     check_grub,
     check_python_version,
+    check_stale_transitions,
     check_vendor_quirks,
 )
 
@@ -238,3 +241,62 @@ def test_check_vendor_quirks_ok_for_unknown_vendor_linux(
 
     assert report.warnings == 0
     assert report.failures == 0
+
+
+# ---------------------------------------------------------------------------
+# check_stale_transitions
+# ---------------------------------------------------------------------------
+
+
+def test_check_stale_transitions_no_file(tmp_path: Path) -> None:
+    report = CheckReport()
+    check_stale_transitions(report, tmp_path, 10)
+    assert report.failures == 0
+    assert report.warnings == 0
+
+
+def test_check_stale_transitions_fresh(tmp_path: Path) -> None:
+    pending_file = tmp_path / "pending-transition.json"
+    started_at = (
+        datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=2)
+    ).isoformat()
+    pending_file.write_text(json.dumps({"startedAt": started_at}), encoding="utf-8")
+
+    report = CheckReport()
+    check_stale_transitions(report, tmp_path, 10)
+    assert report.failures == 0
+    assert report.warnings == 0
+
+
+def test_check_stale_transitions_stale(tmp_path: Path) -> None:
+    pending_file = tmp_path / "pending-transition.json"
+    started_at = (
+        datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=30)
+    ).isoformat()
+    pending_file.write_text(json.dumps({"startedAt": started_at}), encoding="utf-8")
+
+    report = CheckReport()
+    check_stale_transitions(report, tmp_path, 10)
+    assert report.failures == 0
+    assert report.warnings == 1
+
+
+def test_check_stale_transitions_invalid_json(tmp_path: Path) -> None:
+    pending_file = tmp_path / "pending-transition.json"
+    pending_file.write_text("{invalid json", encoding="utf-8")
+
+    report = CheckReport()
+    check_stale_transitions(report, tmp_path, 10)
+    assert report.failures == 1
+    assert report.warnings == 0
+
+
+def test_check_stale_transitions_missing_field(tmp_path: Path) -> None:
+    pending_file = tmp_path / "pending-transition.json"
+    pending_file.write_text("{}", encoding="utf-8")
+
+    report = CheckReport()
+    check_stale_transitions(report, tmp_path, 10)
+    assert report.failures == 1
+    assert report.warnings == 0
+
