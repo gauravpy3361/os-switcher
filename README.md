@@ -32,18 +32,27 @@ Current release: `1.0.0`
    ```
    This installs OS Switcher to `/opt/os-switcher`, sets up the boot-success systemd service, and creates a `/usr/local/bin/os-switcher` symlink.
 
-4. **Configuration**
-   On Windows, inspect firmware entries:
-   ```powershell
+4. **Configuration (Easy Way — Recommended)**
+   Run the setup wizard. It auto-detects your EFI boot entries and writes config.json for you:
+```powershell
+   # Windows (Admin PowerShell)
+   python "C:\Program Files\OSSwitcher\tools\setup_wizard.py"
+```
+```bash
+   # Linux
+   python3 /opt/os-switcher/tools/setup_wizard.py
+```
+   The wizard will show your detected boot entries, ask which is Windows and which is Linux, and write config.json automatically.
+
+   **Manual configuration (Advanced)**
+   If you prefer to configure manually, inspect firmware entries:
+```powershell
    bcdedit /enum firmware
-   ```
-   On Linux, inspect EFI entries:
-   ```bash
+```
+```bash
    sudo efibootmgr -v
-   ```
-   Edit the installed `config.json` (e.g. `C:\Program Files\OSSwitcher\config.json` or `/opt/os-switcher/config.json`) so the Windows-side `targetLabel` matches the Linux firmware application label, and the Linux-side `targetLabel` matches the Windows EFI label. 
-   
-   *Tip:* For real daily use, set `state.mode` to `shared` and map `state.shared.windowsStateDir` and `state.shared.linuxStateDir` to the same durable storage location accessible from both OSes (e.g. an exFAT or FAT32 partition).
+```
+   Then edit config.json and set `targetLabel` to match your boot entry labels.
 
 5. **Run the Doctor**
    Verify your setup is healthy before real use:
