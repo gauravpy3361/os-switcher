@@ -52,3 +52,5 @@ Invoke-Pester .\tests\windows_switch.Tests.ps1
 - The doctor command catches new setup requirements.
 - Real reboot behavior remains opt-in.
 - `CHANGELOG.md` is updated for user-visible changes.
+
+This project follows semantic versioning. Current stable: v1.0.0

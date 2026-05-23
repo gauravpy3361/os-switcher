@@ -6,7 +6,7 @@ OS Switcher changes UEFI one-time boot targets and can reboot the machine. Treat
 
 | Version | Supported |
 | --- | --- |
-| 0.1.x | Yes |
+| 1.0.x | Yes |
 
 ## Reporting A Vulnerability
 
@@ -34,3 +34,5 @@ High-risk issues include:
 - Recovery state being cleared incorrectly
 - Unsafe handling of paths or config values in privileged scripts
 - Installers creating writable privileged files in unsafe locations
+
+Current stable release: v1.0.0
