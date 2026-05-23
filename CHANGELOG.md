@@ -2,6 +2,14 @@
 
 All notable changes are documented here.
 
+## [0.3.1] - 2026-05-23
+### Added
+- linux/install.sh: Single-script Linux installer with preflight checks
+- windows/install.ps1: Single-script Windows installer with preflight checks
+- tools/efi_backup.py: EFI backup utility (runs before every switch)
+- linux/rollback.sh: Recovery mode diagnostics and manual restore guide
+- windows/rollback.ps1: Recovery mode diagnostics and manual restore guide
+
 ## [0.1.1] - 2026-05-23
 ### Fixed
 - linux/switch-to-windows.sh: Lock erasure concurrency bug (PID-based ownership check)
