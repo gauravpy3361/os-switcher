@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config.json"),
     [string]$FirmwareEntriesPath = "",
     [switch]$DryRun,
@@ -122,10 +122,13 @@ function Enter-TransitionLock {
     param([string]$StateDir)
 
     $lockPath = Join-Path $StateDir "transition.lock"
+    if (Test-Path -LiteralPath $lockPath) {
+        throw "Another OS Switcher transition appears to be running. Lock path: $lockPath"
+    }
     try {
         New-Item -ItemType Directory -Path $lockPath -ErrorAction Stop | Out-Null
     } catch {
-        throw "Another OS Switcher transition appears to be running. Lock path: $lockPath"
+        throw "Failed to create transition lock: $_"
     }
 
     return $lockPath
@@ -157,7 +160,11 @@ function Test-PendingTransition {
 
     if (-not (Test-Path -LiteralPath $pendingPath)) {
         if (Test-Path -LiteralPath $stagedPath) {
-            $staged = Get-Content -Raw -LiteralPath $stagedPath | ConvertFrom-Json
+            try {
+                $staged = Get-Content -Raw -LiteralPath $stagedPath -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+            } catch {
+                throw "Failed to parse staged transition file '$stagedPath': $_"
+            }
             $stagedAt = [datetime]::Parse(
                 [string]$staged.startedAt,
                 $null,
@@ -176,7 +183,11 @@ function Test-PendingTransition {
         return
     }
 
-    $pending = Get-Content -Raw -LiteralPath $pendingPath | ConvertFrom-Json
+    try {
+        $pending = Get-Content -Raw -LiteralPath $pendingPath -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        throw "Failed to parse pending transition file '$pendingPath': $_"
+    }
     $startedAt = [datetime]::Parse(
         [string]$pending.startedAt,
         $null,
@@ -190,7 +201,11 @@ function Test-PendingTransition {
 
     $failCount = 0
     if (Test-Path -LiteralPath $failCountPath) {
-        $failCount = [int](Get-Content -Raw -LiteralPath $failCountPath)
+        try {
+            $failCount = [int](Get-Content -Raw -LiteralPath $failCountPath -ErrorAction Stop)
+        } catch {
+            throw "Failed to read or parse boot failure count from '$failCountPath': $_"
+        }
     }
     $failCount += 1
     Set-Content -LiteralPath $failCountPath -Value $failCount -Encoding ASCII
@@ -382,6 +397,13 @@ try {
         }
 
         shutdown /r /t $timeout /c "Switching to Linux workspace"
+        if ($LASTEXITCODE -ne 0) {
+            $pendingPath = Join-Path $stateDir "pending-transition.json"
+            if (Test-Path -LiteralPath $pendingPath) {
+                Remove-Item -LiteralPath $pendingPath -Force
+            }
+            throw "shutdown failed with exit code $LASTEXITCODE. Pending transition state has been cleaned up."
+        }
     } while ($false)
 } finally {
     Exit-TransitionLock -LockPath $lockPath

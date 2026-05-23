@@ -77,9 +77,13 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
 	echo "Another OS Switcher transition appears to be running. Lock path: $LOCK_DIR" >&2
 	exit 1
 fi
+printf '%s\n' "$$" > "$LOCK_DIR/pid"
 
 cleanup_lock() {
-	rmdir "$LOCK_DIR" 2>/dev/null || true
+	if [[ -f "$LOCK_DIR/pid" ]] && [[ "$(cat "$LOCK_DIR/pid" 2>/dev/null)" == "$$" ]]; then
+		rm -f "$LOCK_DIR/pid"
+		rmdir "$LOCK_DIR" 2>/dev/null || true
+	fi
 }
 trap cleanup_lock EXIT
 
@@ -99,8 +103,12 @@ import json
 import sys
 from datetime import datetime, timezone
 
-with open(sys.argv[1], "r", encoding="utf-8") as handle:
-    staged = json.load(handle)
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as handle:
+        staged = json.load(handle)
+except Exception as e:
+    print(f"Error: Failed to parse staged transition JSON file '{sys.argv[1]}': {e}", file=sys.stderr)
+    sys.exit(1)
 
 started = datetime.fromisoformat(staged["startedAt"].replace("Z", "+00:00"))
 print(int((datetime.now(timezone.utc) - started).total_seconds()))
@@ -123,8 +131,12 @@ import json
 import sys
 from datetime import datetime, timezone
 
-with open(sys.argv[1], "r", encoding="utf-8") as handle:
-    pending = json.load(handle)
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as handle:
+        pending = json.load(handle)
+except Exception as e:
+    print(f"Error: Failed to parse pending transition JSON file '{sys.argv[1]}': {e}", file=sys.stderr)
+    sys.exit(1)
 
 started = datetime.fromisoformat(pending["startedAt"].replace("Z", "+00:00"))
 print(int((datetime.now(timezone.utc) - started).total_seconds()))
@@ -266,4 +278,8 @@ fi
 if [[ "$REBOOT_DELAY" =~ ^[0-9]+$ && "$REBOOT_DELAY" -gt 0 ]]; then
 	sleep "$REBOOT_DELAY"
 fi
-systemctl reboot
+if ! systemctl reboot; then
+	rm -f "$PENDING_PATH"
+	echo "systemctl reboot failed. Pending transition state has been cleaned up." >&2
+	exit 1
+fi

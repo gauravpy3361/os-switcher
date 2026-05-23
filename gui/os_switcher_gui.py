@@ -92,6 +92,7 @@ def main() -> int:
         config = load_config()
         label_text = button_text(config)
     except Exception as exc:
+        print(f"[os-switcher] ERROR: {exc}", file=sys.stderr)
         messagebox.showerror("OS Switcher", str(exc))
         return 1
 
@@ -126,6 +127,7 @@ def main() -> int:
                 status.set("Command failed")
                 messagebox.showerror("OS Switcher", output or "Command failed.")
         except Exception as exc:
+            print(f"[os-switcher] ERROR: {exc}", file=sys.stderr)
             status.set("Command failed")
             messagebox.showerror("OS Switcher", str(exc))
         finally:
