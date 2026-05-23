@@ -4,7 +4,7 @@ One-click dual-boot switching for Windows and Linux using UEFI one-time boot tar
 
 This is not hot switching or virtualization. It sets the next boot entry, then performs a normal reboot.
 
-Current release: `1.0.0`
+Current release: `1.1.0`
 
 ## Features
 
@@ -14,9 +14,18 @@ Current release: `1.0.0`
 - **Cross-Platform Installers:** Single-script installers for both Windows and Linux, including systemd and Scheduled Task setup for automated boot-success marking.
 - **GUI:** Optional, lightweight Python GUI for a simple one-click switch experience.
 
+> ⚙️ **Compatibility:** config.json from v0.1.0 onwards is forward-compatible. Existing configurations do not need to be changed when upgrading.
+
 ## First-Time Setup
 
-1. **Clone or Download** the latest release (`os-switcher-x.y.z.zip`) and extract it.
+1. **Download**
+
+   **Easy install (Recommended):**
+   - Windows: Download `OSSwitcher-Setup.exe` from [Releases](https://github.com/gauravpy3361/os-switcher/releases/latest) and run it. The installer handles everything including the setup wizard.
+   - Linux: Download `OSSwitcher-1.1.0-x86_64.AppImage` from [Releases](https://github.com/gauravpy3361/os-switcher/releases/latest), make it executable and run it.
+
+   **Manual install (Advanced):**
+   Download `os-switcher-x.y.z.zip` from [Releases](https://github.com/gauravpy3361/os-switcher/releases/latest) and extract it, then follow steps 2-5 below.
 
 2. **Windows Installation**
    Run an elevated PowerShell session:
