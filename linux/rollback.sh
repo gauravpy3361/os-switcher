@@ -39,7 +39,7 @@ else
 fi
 echo "======================================"
 
-NEWEST_BACKUP="$(ls -t "$STATE_DIR"/efi-backup-*.txt 2>/dev/null | head -n 1 || true)"
+NEWEST_BACKUP="$(find "$STATE_DIR" -maxdepth 1 -name 'efi-backup-*.txt' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2- || true)"
 if [[ -z "$NEWEST_BACKUP" ]]; then
 	NEWEST_BACKUP="No backup files found in $STATE_DIR"
 fi
