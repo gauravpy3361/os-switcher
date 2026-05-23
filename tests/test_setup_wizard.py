@@ -140,7 +140,8 @@ def test_setup_wizard_dry_run_success(tmp_path: Path, monkeypatch: pytest.Monkey
     with patch("tools.setup_wizard.platform.system", return_value="Linux"), \
          patch("tools.setup_wizard.subprocess.run", return_value=mock_run), \
          patch("builtins.input", mock_input), \
-         patch("tools.setup_wizard.ROOT", tmp_path):
+         patch("tools.setup_wizard.ROOT", tmp_path), \
+         patch("os.geteuid", return_value=0, create=True):
         
         args = ["setup_wizard.py", "--output", str(output_path), "--dry-run"]
         monkeypatch.setattr(sys, "argv", args)
@@ -194,7 +195,8 @@ def test_setup_wizard_write_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     with patch("tools.setup_wizard.platform.system", return_value="Linux"), \
          patch("tools.setup_wizard.subprocess.run", side_effect=[mock_run, doctor_mock]), \
          patch("builtins.input", mock_input), \
-         patch("tools.setup_wizard.ROOT", tmp_path):
+         patch("tools.setup_wizard.ROOT", tmp_path), \
+         patch("os.geteuid", return_value=0, create=True):
         
         args = ["setup_wizard.py", "--output", str(output_path)]
         monkeypatch.setattr(sys, "argv", args)
@@ -211,3 +213,27 @@ def test_setup_wizard_write_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         assert written_config["linux"]["targetLabel"] == "Windows Boot Manager"
         assert written_config["windows"]["stateDir"] == "/custom/state/dir"
         assert written_config["linux"]["stateDir"] == "/custom/state/dir"
+
+
+def test_setup_wizard_requires_admin_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    with patch("tools.setup_wizard.platform.system", return_value="Windows"), \
+         patch("ctypes.windll.shell32.IsUserAnAdmin", return_value=0, create=True):
+        
+        args = ["setup_wizard.py"]
+        monkeypatch.setattr(sys, "argv", args)
+        
+        with pytest.raises(SystemExit) as excinfo:
+            main()
+        assert excinfo.value.code == 1
+
+
+def test_setup_wizard_requires_root_on_linux(monkeypatch: pytest.MonkeyPatch) -> None:
+    with patch("tools.setup_wizard.platform.system", return_value="Linux"), \
+         patch("os.geteuid", return_value=1000, create=True):
+        
+        args = ["setup_wizard.py"]
+        monkeypatch.setattr(sys, "argv", args)
+        
+        with pytest.raises(SystemExit) as excinfo:
+            main()
+        assert excinfo.value.code == 1

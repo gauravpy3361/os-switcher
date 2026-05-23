@@ -72,6 +72,28 @@ def detect_efi_entries(os_name: str) -> list[BootEntry]:
 
 
 def main() -> int:
+    os_name = current_platform()
+    if os_name == "windows":
+        try:
+            import ctypes
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        except Exception:
+            is_admin = False
+        if not is_admin:
+            print("ERROR: This wizard must be run as Administrator.", file=sys.stderr)
+            print("Right-click PowerShell and select 'Run as Administrator', then try again.", file=sys.stderr)
+            sys.exit(1)
+    elif os_name == "linux":
+        try:
+            import os
+            is_root = os.geteuid() == 0
+        except Exception:
+            is_root = False
+        if not is_root:
+            print("ERROR: This wizard must be run as root.", file=sys.stderr)
+            print("Run: sudo python3 tools/setup_wizard.py", file=sys.stderr)
+            sys.exit(1)
+
     parser = argparse.ArgumentParser(description="OS Switcher Setup Wizard")
     parser.add_argument("-o", "--output", type=Path, help="Path to write the config.json file")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be written without writing it")
