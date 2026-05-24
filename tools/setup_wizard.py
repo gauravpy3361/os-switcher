@@ -109,7 +109,13 @@ def main() -> int:
 
     # STEP 2 — Detect EFI entries
     print("Detecting EFI boot entries...")
-    entries = detect_efi_entries(os_name)
+    detected_entries = detect_efi_entries(os_name)
+
+    entries = []
+    for e in detected_entries:
+        cleaned_label = e.label.split('\t')[0].strip()
+        if cleaned_label:
+            entries.append(BootEntry(identifier=e.identifier, label=cleaned_label, raw=e.raw))
 
     if not entries:
         print("Error: No boot entries could be parsed from the firmware output.", file=sys.stderr)

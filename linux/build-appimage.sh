@@ -70,6 +70,8 @@ mkdir -p "$SANDBOX"
 
 # Copy execution files to writable sandbox
 cp -r "$HERE/opt/os-switcher/"* "$SANDBOX/"
+chmod +x "$SANDBOX/linux/"*.sh
+chmod +x "$SANDBOX/windows/"*.ps1 2>/dev/null || true
 
 # Use system-wide config if available and persistent doesn't exist
 if [ -f "/etc/os-switcher/config.json" ] && [ ! -f "$PERSISTENT_CONFIG" ]; then

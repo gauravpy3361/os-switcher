@@ -237,3 +237,72 @@ def test_setup_wizard_requires_root_on_linux(monkeypatch: pytest.MonkeyPatch) ->
         with pytest.raises(SystemExit) as excinfo:
             main()
         assert excinfo.value.code == 1
+
+
+def test_setup_wizard_filters_and_truncates_labels(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Boot0000 has a clean label
+    # Boot0001 has a tab and path in the label
+    # Boot0002 has an empty label (should be filtered out)
+    mock_output = "BootCurrent: 0001\nBoot0000* Windows Boot Manager\nBoot0001* Fedora\tHD(1,GPT,...)\nBoot0002* \n"
+    mock_run = MagicMock()
+    mock_run.returncode = 0
+    mock_run.stdout = mock_output
+    mock_run.stderr = ""
+
+    # Inputs:
+    # 1. Windows entry -> 1 (Windows Boot Manager)
+    # 2. Linux entry -> 2 (Fedora)
+    # 3. State directory -> default
+    # 4. Confirm -> yes
+    inputs = ["1", "2", "", "yes"]
+    input_generator = (val for val in inputs)
+
+    def mock_input(prompt: str = "") -> str:
+        return next(input_generator)
+
+    example_config = {
+        "windows": {
+            "targetLabel": "Placeholder",
+            "stateDir": ""
+        },
+        "linux": {
+            "targetLabel": "Placeholder",
+            "stateDir": ""
+        },
+        "state": {
+            "mode": "local"
+        },
+        "safety": {
+            "requireConfirmation": True,
+            "pendingTransitionTimeoutMinutes": 10,
+            "maxBootFailures": 3
+        }
+    }
+    example_path = tmp_path / "config.example.json"
+    example_path.write_text(json.dumps(example_config), encoding="utf-8")
+
+    output_path = tmp_path / "config.json"
+
+    doctor_mock = MagicMock()
+    doctor_mock.returncode = 0
+
+    with patch("tools.setup_wizard.platform.system", return_value="Linux"), \
+         patch("tools.setup_wizard.subprocess.run", side_effect=[mock_run, doctor_mock]), \
+         patch("builtins.input", mock_input), \
+         patch("tools.setup_wizard.ROOT", tmp_path), \
+         patch("os.geteuid", return_value=0, create=True):
+        
+        args = ["setup_wizard.py", "--output", str(output_path)]
+        monkeypatch.setattr(sys, "argv", args)
+        
+        exit_code = main()
+        assert exit_code == 0
+        assert output_path.exists()
+
+        # Read config and assert fields are correctly truncated and filtered
+        written_config = json.loads(output_path.read_text(encoding="utf-8"))
+        assert written_config["windows"]["bootEntryLabel"] == "Windows Boot Manager"
+        assert written_config["linux"]["bootEntryLabel"] == "Fedora"  # tab and device path stripped!
+        assert written_config["windows"]["targetLabel"] == "Fedora"
+        assert written_config["linux"]["targetLabel"] == "Windows Boot Manager"
+
