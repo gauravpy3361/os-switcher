@@ -210,14 +210,22 @@ def main() -> int:
                         output = "✅ Dry run successful — ready to switch!"
                 else:
                     err_msg = completed.stdout + completed.stderr
-                    plain_err = "Something went wrong. Run doctor.py for details."
-                    if "BitLocker" in err_msg:
-                        plain_err = "BitLocker is active. Disable it first."
-                    elif "Administrator" in err_msg:
-                        plain_err = "Please run as Administrator."
-                    elif "not found" in err_msg:
-                        plain_err = "Boot entry not found. Run setup wizard again."
-                    output = f"❌ {plain_err}"
+                    err_msg_lower = err_msg.lower()
+                    
+                    if "no firmware entries" in err_msg_lower or "not found" in err_msg_lower or "could not find" in err_msg_lower:
+                        output = "❌ Boot entry not found. Open Edit Config and check your targetLabel matches exactly."
+                    elif "config" in err_msg_lower or "invalid" in err_msg_lower or "validation" in err_msg_lower:
+                        output = "❌ Config error. Click Edit Config and verify your settings."
+                    elif "lock" in err_msg_lower or "transition" in err_msg_lower or "pending" in err_msg_lower:
+                        output = "❌ A previous switch is still pending. Restart and try again."
+                    elif "bitlocker" in err_msg_lower:
+                        output = "❌ BitLocker is active. Go to Control Panel → BitLocker → Turn Off BitLocker."
+                    elif "timeout" in err_msg_lower or "reboot" in err_msg_lower:
+                        output = "❌ Reboot failed. Try switching manually from PowerShell."
+                    elif "administrator" in err_msg_lower:
+                        output = "❌ Please run as Administrator."
+                    else:
+                        output = "❌ Something went wrong. Run doctor.py for details."
             else:
                 command = build_command(allow_reboot.get(), force=False)
                 completed = subprocess.run(
@@ -235,6 +243,7 @@ def main() -> int:
             def on_complete() -> None:
                 if completed.returncode == 0:
                     status_label.configure(fg="#137333")  # Green
+                    details.set("")
                     if current_platform() == "windows":
                         status.set(output)
                         messagebox.showinfo("OS Switcher", output)
@@ -245,9 +254,11 @@ def main() -> int:
                     status_label.configure(fg="#b31412")  # Red
                     if current_platform() == "windows":
                         status.set(output)
+                        details.set("For full details run: python tools\\doctor.py")
                         messagebox.showerror("OS Switcher", output)
                     else:
                         status.set("Command failed")
+                        details.set("For full details run: python tools\\doctor.py")
                         messagebox.showerror("OS Switcher", output or "Command failed.")
                 switch_button.configure(state="normal")
                 
@@ -257,6 +268,7 @@ def main() -> int:
             def on_error() -> None:
                 status_label.configure(fg="#b31412")  # Red
                 status.set(f"❌ {exc}")
+                details.set("For full details run: python tools\\doctor.py")
                 messagebox.showerror("OS Switcher", f"❌ {exc}")
                 switch_button.configure(state="normal")
             root.after(0, on_error)
@@ -310,6 +322,10 @@ def main() -> int:
 
     status_label = Label(root, textvariable=status, font=("Segoe UI", 9), fg="gray")
     status_label.pack(pady=(10, 0))
+
+    details = StringVar(value="")
+    details_label = Label(root, textvariable=details, font=("Segoe UI", 8), fg="gray")
+    details_label.pack(pady=(2, 0))
 
     root.mainloop()
     return 0
