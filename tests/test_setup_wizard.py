@@ -10,6 +10,12 @@ import pytest
 from tools.setup_wizard import current_platform, detect_efi_entries, main
 
 
+@pytest.fixture(autouse=True)
+def mock_no_gui():
+    with patch("tools.setup_wizard.is_gui_available", return_value=False):
+        yield
+
+
 def test_current_platform() -> None:
     with patch("tools.setup_wizard.platform.system", return_value="Windows"):
         assert current_platform() == "windows"
@@ -158,7 +164,7 @@ def test_setup_wizard_write_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     mock_run.stdout = mock_output
     mock_run.stderr = ""
 
-    inputs = ["1", "2", "/custom/state/dir", "yes"]
+    inputs = ["1", "2", "yes"]
     input_generator = (val for val in inputs)
 
     def mock_input(prompt: str = "") -> str:
@@ -211,7 +217,7 @@ def test_setup_wizard_write_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         assert written_config["linux"]["bootEntryLabel"] == "Fedora"
         assert written_config["windows"]["targetLabel"] == "Fedora"
         assert written_config["linux"]["targetLabel"] == "Windows Boot Manager"
-        assert written_config["linux"]["stateDir"] == "/custom/state/dir"
+        assert written_config["linux"]["stateDir"] == "/var/lib/os-switcher"
         assert written_config["windows"]["stateDir"] == "C:\\ProgramData\\OSSwitcher"
 
 
