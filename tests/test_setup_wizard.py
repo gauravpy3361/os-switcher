@@ -211,8 +211,8 @@ def test_setup_wizard_write_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         assert written_config["linux"]["bootEntryLabel"] == "Fedora"
         assert written_config["windows"]["targetLabel"] == "Fedora"
         assert written_config["linux"]["targetLabel"] == "Windows Boot Manager"
-        assert written_config["windows"]["stateDir"] == "/custom/state/dir"
         assert written_config["linux"]["stateDir"] == "/custom/state/dir"
+        assert written_config["windows"]["stateDir"] == "C:\\ProgramData\\OSSwitcher"
 
 
 def test_setup_wizard_requires_admin_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:

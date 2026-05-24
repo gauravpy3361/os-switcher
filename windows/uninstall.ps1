@@ -37,6 +37,10 @@ if (Test-Path -LiteralPath $shortcutPath) {
     Write-Host "SKIP Start Menu shortcut not found."
 }
 
+# --- Step 3.5: Remove Desktop shortcuts ---
+Remove-Item "$env:USERPROFILE\Desktop\OS Switcher.lnk" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:PUBLIC\Desktop\OS Switcher.lnk" -Force -ErrorAction SilentlyContinue
+
 # --- Step 4: Remove install directory ---
 if (Test-Path -LiteralPath $InstallDir) {
     Remove-Item -LiteralPath $InstallDir -Recurse -Force

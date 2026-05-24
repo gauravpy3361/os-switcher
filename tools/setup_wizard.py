@@ -205,8 +205,12 @@ def main() -> int:
     config_data["linux"]["bootEntryLabel"] = linux_entry.label
     config_data["windows"]["targetLabel"] = linux_entry.label
     config_data["linux"]["targetLabel"] = windows_entry.label
-    config_data["windows"]["stateDir"] = state_dir
-    config_data["linux"]["stateDir"] = state_dir
+    if os_name == "windows":
+        config_data["windows"]["stateDir"] = state_dir
+        config_data["linux"]["stateDir"] = "/var/lib/os-switcher"
+    else:
+        config_data["linux"]["stateDir"] = state_dir
+        config_data["windows"]["stateDir"] = "C:\\ProgramData\\OSSwitcher"
 
     # Handle dry run or writing
     if args.dry_run:
