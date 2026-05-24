@@ -113,6 +113,13 @@ class SetupWizardApp:
         self.root.geometry("540x390")
         self.root.resizable(False, False)
 
+        icon_path = ROOT / "gui" / "os-switcher-logo.ico"
+        if icon_path.exists():
+            try:
+                self.root.iconbitmap(str(icon_path))
+            except Exception:
+                pass
+
         # Premium Modern Colors
         self.bg_color = "#ffffff"
         self.primary_color = "#1a73e8"      # Premium Google Blue

@@ -128,6 +128,13 @@ def main() -> int:
     root.title("OS Switcher")
     root.geometry("480x280")
     root.resizable(False, False)
+    
+    icon_path = ROOT / "gui" / "os-switcher-logo.ico"
+    if icon_path.exists():
+        try:
+            root.iconbitmap(str(icon_path))
+        except Exception as exc:
+            print(f"[os-switcher] WARNING: Could not set window icon: {exc}", file=sys.stderr)
 
     is_recovery = (state_dir / "recovery-mode.json").exists()
     is_pending = (state_dir / "pending-transition.json").exists()
