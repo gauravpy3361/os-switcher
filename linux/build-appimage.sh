@@ -152,9 +152,10 @@ EOF
 mkdir -p "$REPO_ROOT/dist"
 echo "Compiling AppImage..."
 export ARCH=x86_64
-$APPIMAGETOOL_CMD "$APP_DIR" "$REPO_ROOT/dist/OSSwitcher-1.0.0-x86_64.AppImage"
+VERSION=$(cat "$REPO_ROOT/VERSION")
+$APPIMAGETOOL_CMD "$APP_DIR" "$REPO_ROOT/dist/OSSwitcher-$VERSION-x86_64.AppImage"
 
 # 10. Clean up build directory
 rm -rf "$BUILD_DIR"
 
-echo "AppImage build complete: dist/OSSwitcher-1.0.0-x86_64.AppImage"
+echo "AppImage build complete: dist/OSSwitcher-$VERSION-x86_64.AppImage"

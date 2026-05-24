@@ -1,10 +1,14 @@
 ; Inno Setup Script for OS Switcher
 ; Ensures professional installation, setup, and clean uninstallation.
 
+#define FileHandle FileOpen("..\VERSION")
+#define MyAppVersion FileRead(FileHandle)
+#expr FileClose(FileHandle)
+
 [Setup]
 AppId={{A85C3970-DE9F-4D2A-949B-5100C888A21C}}
 AppName=OS Switcher
-AppVersion=1.1.0
+AppVersion={#MyAppVersion}
 AppPublisher=Antigravity
 DefaultDirName={commonpf}\OSSwitcher
 DefaultGroupName=OS Switcher

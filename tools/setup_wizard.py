@@ -760,9 +760,12 @@ def main() -> int:
 
     config_output_path = args.output if args.output else (ROOT / "config.json")
 
+    version_file = ROOT / "VERSION"
+    version = version_file.read_text().strip() if version_file.exists() else "1.0.0"
+
     # STEP 1 — Welcome banner
     print("==========================================")
-    print("OS Switcher Setup Wizard v1.0.0")
+    print(f"OS Switcher Setup Wizard v{version}")
     print("This wizard will detect your boot entries and create config.json")
     print("==========================================\n")
 
