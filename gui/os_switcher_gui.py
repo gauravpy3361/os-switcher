@@ -236,30 +236,40 @@ def main() -> int:
                     stdin=subprocess.DEVNULL,
                     text=True,
                 )
-                output = "\n".join(
-                    part for part in [completed.stdout.strip(), completed.stderr.strip()] if part
-                )
+                err_msg = completed.stdout + completed.stderr
+                if completed.returncode == 0:
+                    if allow_reboot.get():
+                        output = "✅ Switching to Linux..."
+                    else:
+                        output = "✅ Dry run successful — ready to switch!"
+                else:
+                    lower = err_msg.lower()
+                    if any(x in lower for x in ["not found", "no firmware", "could not find"]):
+                        output = "❌ Boot entry not found. Open Edit Config and check your targetLabel matches exactly."
+                    elif any(x in lower for x in ["config", "invalid", "validation"]):
+                        output = "❌ Config error. Click Edit Config and verify your settings."
+                    elif any(x in lower for x in ["lock", "transition", "pending"]):
+                        output = "❌ A previous switch is still pending. Restart and try again."
+                    elif "bitlocker" in lower:
+                        output = "❌ BitLocker is active. Go to Control Panel → BitLocker → Turn Off BitLocker."
+                    elif any(x in lower for x in ["timeout", "reboot"]):
+                        output = "❌ Reboot failed. Try switching manually."
+                    elif any(x in lower for x in ["permission", "administrator", "root"]):
+                        output = "❌ Permission denied. Run with sudo."
+                    else:
+                        output = "❌ Something went wrong. Run doctor.py for details."
             
             def on_complete() -> None:
                 if completed.returncode == 0:
                     status_label.configure(fg="#137333")  # Green
                     details.set("")
-                    if current_platform() == "windows":
-                        status.set(output)
-                        messagebox.showinfo("OS Switcher", output)
-                    else:
-                        status.set("Command completed")
-                        messagebox.showinfo("OS Switcher", output or "Command completed.")
+                    status.set(output)
+                    messagebox.showinfo("OS Switcher", output)
                 else:
                     status_label.configure(fg="#b31412")  # Red
-                    if current_platform() == "windows":
-                        status.set(output)
-                        details.set("For full details run: python tools\\doctor.py")
-                        messagebox.showerror("OS Switcher", output)
-                    else:
-                        status.set("Command failed")
-                        details.set("For full details run: python tools\\doctor.py")
-                        messagebox.showerror("OS Switcher", output or "Command failed.")
+                    status.set(output)
+                    details.set("For full details run: python tools\\doctor.py")
+                    messagebox.showerror("OS Switcher", output)
                 switch_button.configure(state="normal")
                 
             root.after(0, on_complete)

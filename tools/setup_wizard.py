@@ -485,6 +485,9 @@ class SetupWizardApp:
                     json.dump(config_data, f, indent=2)
                     f.write("\n")
                 self.show_done_screen("config.json written successfully.")
+                if current_platform() == "linux":
+                    import subprocess
+                    subprocess.Popen(["python3", str(ROOT / "gui" / "os_switcher_gui.py")])
             except Exception as exc:
                 self.show_error(f"Failed to write configuration: {exc}")
 
@@ -743,6 +746,9 @@ def run_terminal_wizard(output_path: Path, dry_run: bool) -> int:
                 json.dump(config_data, f, indent=2)
                 f.write("\n")
             print(f"\nconfig.json written successfully. You are ready to switch!")
+            if current_platform() == "linux":
+                import subprocess
+                subprocess.Popen(["python3", str(ROOT / "gui" / "os_switcher_gui.py")])
         except Exception as exc:
             print(f"Error: Failed to write configuration to {output_path}: {exc}", file=sys.stderr)
             return 1
