@@ -36,8 +36,8 @@ Name: "{group}\Uninstall OS Switcher"; Filename: "{uninstallexe}"; IconFilename:
 ; Run the Scheduled Task installer silently
 Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\windows\install-boot-success-task.ps1"""; Flags: runhidden
 
-; Run the interactive setup wizard in a new terminal window
-Filename: "cmd.exe"; Parameters: "/k python ""{app}\tools\setup_wizard.py"" & pause"; Description: "Launch Setup Wizard"; Flags: postinstall nowait shellexec
+; Run the interactive setup wizard as an elevated GUI application
+Filename: "pythonw.exe"; Parameters: """{app}\tools\setup_wizard.py"""; Verb: "runas"; Description: "Launch Setup Wizard (Recommended)"; Flags: postinstall nowait shellexec
 
 [UninstallRun]
 ; Silently clean up the Scheduled Task during uninstall
