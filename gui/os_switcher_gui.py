@@ -160,18 +160,29 @@ def main() -> int:
 
     def run_switch_thread() -> None:
         try:
-            command = build_command(allow_reboot.get(), force=False)
-            completed = subprocess.run(
-                command,
-                cwd=str(ROOT),
-                check=False,
-                capture_output=True,
-                stdin=subprocess.DEVNULL,
-                text=True,
-            )
-            output = "\n".join(
-                part for part in [completed.stdout.strip(), completed.stderr.strip()] if part
-            )
+            if current_platform() == "windows":
+                script_path = ROOT / "windows" / "switch-to-linux.ps1"
+                config_path = CONFIG_PATH
+                arg_reboot = "-Reboot -Force" if allow_reboot.get() else "-DryRun"
+                
+                completed = subprocess.run([
+                    "powershell", "-Command",
+                    f"Start-Process powershell -Verb RunAs -ArgumentList '-ExecutionPolicy Bypass -File \"{script_path}\" -ConfigPath \"{config_path}\" {arg_reboot}'"
+                ], check=False, capture_output=True, text=True)
+                output = "Elevated switcher request dispatched."
+            else:
+                command = build_command(allow_reboot.get(), force=False)
+                completed = subprocess.run(
+                    command,
+                    cwd=str(ROOT),
+                    check=False,
+                    capture_output=True,
+                    stdin=subprocess.DEVNULL,
+                    text=True,
+                )
+                output = "\n".join(
+                    part for part in [completed.stdout.strip(), completed.stderr.strip()] if part
+                )
             
             def on_complete() -> None:
                 if completed.returncode == 0:
