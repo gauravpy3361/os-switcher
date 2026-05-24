@@ -491,43 +491,24 @@ class SetupWizardApp:
     def show_done_screen(self, status_msg: str):
         self.clear_container()
 
-        lbl_title = tkinter.Label(
+        # Premium Loading View
+        lbl_loading = tkinter.Label(
             self.container,
-            text="You're all set!",
+            text="Running system health checks...",
             font=("Arial", 16, "bold"),
             fg=self.primary_color,
             bg=self.bg_color
         )
-        lbl_title.pack(anchor="w", pady=5)
+        lbl_loading.pack(pady=(100, 10))
 
-        lbl_status = tkinter.Label(
+        lbl_sub = tkinter.Label(
             self.container,
-            text=status_msg,
-            font=("Arial", 10),
+            text="Verifying boot paths, EFI layout, and target permissions...",
+            font=("Arial", 11),
             fg=self.sec_text_color,
             bg=self.bg_color
         )
-        lbl_status.pack(anchor="w", pady=2)
-
-        lbl_doc = tkinter.Label(
-            self.container,
-            text="Running doctor checks...",
-            font=("Arial", 11, "bold"),
-            fg=self.text_color,
-            bg=self.bg_color
-        )
-        lbl_doc.pack(anchor="w", pady=10)
-
-        # TextBox/Label for Doctor output
-        doc_frame = tkinter.Frame(self.container, bg="#f8f9fa", bd=1, relief="solid")
-        doc_frame.pack(fill="both", expand=True, pady=5)
-
-        doc_text = tkinter.Text(doc_frame, font=("Courier", 9), bg="#f8f9fa", fg=self.text_color, wrap="word", bd=0, highlightthickness=0)
-        doc_scroll = tkinter.Scrollbar(doc_frame, command=doc_text.yview)
-        doc_text.configure(yscrollcommand=doc_scroll.set)
-
-        doc_text.pack(side="left", fill="both", expand=True, padx=5, pady=5)
-        doc_scroll.pack(side="right", fill="y")
+        lbl_sub.pack(pady=5)
 
         import threading
 
@@ -540,35 +521,87 @@ class SetupWizardApp:
                     text=True,
                     check=False,
                 )
-                output = completed.stdout + completed.stderr
+                success = (completed.returncode == 0)
+            except Exception:
+                success = False
 
-                status_lbl_text = "Doctor validation complete."
-                fg_status = self.text_color
-                if completed.returncode == 0:
-                    status_lbl_text = "Doctor validation: SUCCESS (all checks passed)"
-                    fg_status = "#137333"
-                else:
-                    status_lbl_text = "Doctor validation: WARNING/FAIL (check details)"
-                    fg_status = "#b31412"
+            def update_ui():
+                self.show_final_status_screen(success)
 
-                def update_ui():
-                    doc_text.insert("end", output)
-                    doc_text.configure(state="disabled")
-                    lbl_doc.configure(text=status_lbl_text, fg=fg_status)
-
-                self.root.after(0, update_ui)
-            except Exception as e:
-                def update_ui_err():
-                    doc_text.insert("end", f"Failed to run doctor check: {e}")
-                    doc_text.configure(state="disabled")
-                    lbl_doc.configure(text="Doctor run failed.", fg="#d93025")
-                self.root.after(0, update_ui_err)
+            self.root.after(0, update_ui)
 
         threading.Thread(target=run_doctor, daemon=True).start()
 
-        # Final Launch Button
-        btn_close = tkinter.Button(
+    def show_final_status_screen(self, success: bool):
+        self.clear_container()
+
+        if success:
+            icon_char = "✓"
+            icon_color = "#0f9d58"  # Vibrant Google Green
+            title_text = "Installation complete!"
+            subtitle_text = "OS Switcher is configured and ready to use."
+        else:
+            icon_char = "⚠"
+            icon_color = "#f4b400"  # Vibrant Google Yellow/Orange
+            title_text = "Setup complete with warnings"
+            subtitle_text = "Some checks didn't pass. Run doctor.py for details."
+
+        # Premium Large Centered Icon
+        lbl_icon = tkinter.Label(
             self.container,
+            text=icon_char,
+            font=("Arial", 64),
+            fg=icon_color,
+            bg=self.bg_color
+        )
+        lbl_icon.pack(pady=(40, 10))
+
+        # Title Label
+        lbl_title = tkinter.Label(
+            self.container,
+            text=title_text,
+            font=("Arial", 18, "bold"),
+            fg=self.text_color,
+            bg=self.bg_color
+        )
+        lbl_title.pack(pady=5)
+
+        # Subtitle Label
+        lbl_sub = tkinter.Label(
+            self.container,
+            text=subtitle_text,
+            font=("Arial", 11),
+            fg=self.sec_text_color,
+            bg=self.bg_color,
+            wraplength=480
+        )
+        lbl_sub.pack(pady=(5, 35))
+
+        # Centered button container
+        btn_frame = tkinter.Frame(self.container, bg=self.bg_color)
+        btn_frame.pack(fill="x", pady=10)
+
+        # Beautiful custom Close Button
+        btn_close = tkinter.Button(
+            btn_frame,
+            text="Close",
+            font=("Arial", 11, "bold"),
+            bg="#f1f3f4",
+            fg=self.text_color,
+            activebackground="#e8eaed",
+            activeforeground=self.text_color,
+            relief="flat",
+            bd=0,
+            padx=25,
+            pady=8,
+            cursor="hand2",
+            command=self.root.destroy
+        )
+        btn_close.pack(side="right", padx=(10, 0))
+
+        # Beautiful custom Launch Button
+        btn_launch = tkinter.Button(
+            btn_frame,
             text="Launch OS Switcher",
             font=("Arial", 11, "bold"),
             bg=self.primary_color,
@@ -577,12 +610,12 @@ class SetupWizardApp:
             activeforeground="#ffffff",
             relief="flat",
             bd=0,
-            padx=20,
+            padx=25,
             pady=8,
             cursor="hand2",
             command=self.launch_os_switcher
         )
-        btn_close.pack(anchor="e", pady=10)
+        btn_launch.pack(side="right")
 
     def launch_os_switcher(self):
         self.root.destroy()
