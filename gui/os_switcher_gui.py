@@ -112,6 +112,27 @@ def get_rollback_command() -> str:
 
 
 def main() -> int:
+    if platform.system().lower() == "windows":
+        import ctypes
+        try:
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+        except Exception:
+            is_admin = False
+
+        if not is_admin:
+            is_frozen = getattr(sys, 'frozen', False)
+            if is_frozen:
+                args = sys.argv[1:]
+            else:
+                args = sys.argv
+            
+            arg_str = " ".join(f'"{a}"' if " " in a else a for a in args)
+            try:
+                ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, arg_str, None, 1)
+            except Exception as e:
+                print(f"[os-switcher] UAC elevation request failed: {e}", file=sys.stderr)
+            sys.exit(0)
+
     try:
         raw_config = load_config()
         config = validate(CONFIG_PATH)
@@ -163,13 +184,40 @@ def main() -> int:
             if current_platform() == "windows":
                 script_path = ROOT / "windows" / "switch-to-linux.ps1"
                 config_path = CONFIG_PATH
-                arg_reboot = "-Reboot -Force" if allow_reboot.get() else "-DryRun"
                 
-                completed = subprocess.run([
-                    "powershell", "-Command",
-                    f"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-ExecutionPolicy Bypass -NoExit -File \"{script_path}\" -ConfigPath \"{config_path}\" {arg_reboot}'"
-                ], check=False, capture_output=True, text=True)
-                output = "Elevated switcher request dispatched."
+                cmd_args = [
+                    "powershell",
+                    "-ExecutionPolicy", "Bypass",
+                    "-File", str(script_path),
+                    "-ConfigPath", str(config_path),
+                ]
+                if allow_reboot.get():
+                    cmd_args.extend(["-Reboot", "-Force"])
+                else:
+                    cmd_args.append("-DryRun")
+                
+                completed = subprocess.run(
+                    cmd_args,
+                    capture_output=True,
+                    text=True,
+                    creationflags=0x08000000,  # CREATE_NO_WINDOW
+                )
+                
+                if completed.returncode == 0:
+                    if allow_reboot.get():
+                        output = "✅ Switching to Linux..."
+                    else:
+                        output = "✅ Dry run successful — ready to switch!"
+                else:
+                    err_msg = completed.stdout + completed.stderr
+                    plain_err = "Something went wrong. Run doctor.py for details."
+                    if "BitLocker" in err_msg:
+                        plain_err = "BitLocker is active. Disable it first."
+                    elif "Administrator" in err_msg:
+                        plain_err = "Please run as Administrator."
+                    elif "not found" in err_msg:
+                        plain_err = "Boot entry not found. Run setup wizard again."
+                    output = f"❌ {plain_err}"
             else:
                 command = build_command(allow_reboot.get(), force=False)
                 completed = subprocess.run(
@@ -186,19 +234,30 @@ def main() -> int:
             
             def on_complete() -> None:
                 if completed.returncode == 0:
-                    status.set("Command completed")
-                    messagebox.showinfo("OS Switcher", output or "Command completed.")
+                    status_label.configure(fg="#137333")  # Green
+                    if current_platform() == "windows":
+                        status.set(output)
+                        messagebox.showinfo("OS Switcher", output)
+                    else:
+                        status.set("Command completed")
+                        messagebox.showinfo("OS Switcher", output or "Command completed.")
                 else:
-                    status.set("Command failed")
-                    messagebox.showerror("OS Switcher", output or "Command failed.")
+                    status_label.configure(fg="#b31412")  # Red
+                    if current_platform() == "windows":
+                        status.set(output)
+                        messagebox.showerror("OS Switcher", output)
+                    else:
+                        status.set("Command failed")
+                        messagebox.showerror("OS Switcher", output or "Command failed.")
                 switch_button.configure(state="normal")
                 
             root.after(0, on_complete)
         except Exception as exc:
             print(f"[os-switcher] ERROR: {exc}", file=sys.stderr)
             def on_error() -> None:
-                status.set("Command failed")
-                messagebox.showerror("OS Switcher", str(exc))
+                status_label.configure(fg="#b31412")  # Red
+                status.set(f"❌ {exc}")
+                messagebox.showerror("OS Switcher", f"❌ {exc}")
                 switch_button.configure(state="normal")
             root.after(0, on_error)
 
@@ -249,7 +308,8 @@ def main() -> int:
     Checkbutton(bottom_frame, text="Allow reboot", variable=allow_reboot).pack(side="left", padx=(0, 20))
     Button(bottom_frame, text="Edit Config", command=edit_config).pack(side="left")
 
-    Label(root, textvariable=status, font=("Segoe UI", 9), fg="gray").pack(pady=(10, 0))
+    status_label = Label(root, textvariable=status, font=("Segoe UI", 9), fg="gray")
+    status_label.pack(pady=(10, 0))
 
     root.mainloop()
     return 0
