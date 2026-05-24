@@ -167,7 +167,7 @@ def main() -> int:
                 
                 completed = subprocess.run([
                     "powershell", "-Command",
-                    f"Start-Process powershell -Verb RunAs -ArgumentList '-ExecutionPolicy Bypass -File \"{script_path}\" -ConfigPath \"{config_path}\" {arg_reboot}'"
+                    f"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-ExecutionPolicy Bypass -NoExit -File \"{script_path}\" -ConfigPath \"{config_path}\" {arg_reboot}'"
                 ], check=False, capture_output=True, text=True)
                 output = "Elevated switcher request dispatched."
             else:
