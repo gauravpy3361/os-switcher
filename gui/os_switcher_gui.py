@@ -161,6 +161,7 @@ def main() -> int:
     y = (screen_height - height) // 2
     root.geometry(f"{width}x{height}+{x}+{y}")
     
+    import sys
     import sys as _sys
     _sys.modules['platform'] = __import__('platform')
     _sys.modules['tkinter'] = __import__('tkinter')
