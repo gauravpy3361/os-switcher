@@ -149,8 +149,17 @@ def main() -> int:
 
     root = Tk()
     root.title("OS Switcher")
-    root.geometry("480x280")
     root.resizable(False, False)
+
+    # Center the window on screen
+    width = 480
+    height = 280
+    root.update_idletasks()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    root.geometry(f"{width}x{height}+{x}+{y}")
     
     icon_path = ROOT / "gui" / "os-switcher-logo.ico"
     if icon_path.exists():
@@ -290,25 +299,38 @@ def main() -> int:
         status.set("Running command...")
         threading.Thread(target=run_switch_thread, daemon=True).start()
 
-    Label(root, text="OS Switcher", font=("Segoe UI", 18, "bold")).pack(pady=(16, 4))
+    # Premium Modern Colors
+    bg_color = "#ffffff"
+    primary_color = "#1a73e8"      # Premium Google Blue
+    primary_hover = "#1557b0"
+    text_color = "#202124"
+    sec_text_color = "#5f6368"
+    border_color = "#dadce0"
 
-    status_text = ""
-    status_color = "black"
+    root.configure(bg=bg_color)
+
+    # Title
+    lbl_title = Label(root, text="OS Switcher", font=("Arial", 20, "bold"), fg=text_color, bg=bg_color)
+    lbl_title.pack(pady=(20, 4))
+
+    # Health status color mapping
     if is_recovery:
         status_text = "RECOVERY MODE ACTIVE"
-        status_color = "red"
+        status_color = "#d93025"  # Vibrant Red
     elif is_pending:
         status_text = "Pending transition in progress"
-        status_color = "orange"
+        status_color = "#e37400"  # Vibrant Orange
     elif fail_count > 0:
         status_text = f"Boot failure count: {fail_count}"
-        status_color = "orange"
+        status_color = "#e37400"
     else:
         status_text = "System health normal"
-        status_color = "green"
+        status_color = "#0f9d58"  # Vibrant Green
 
-    Label(root, text=status_text, fg=status_color, font=("Segoe UI", 10, "bold")).pack(pady=(0, 10))
+    lbl_health = Label(root, text=status_text, fg=status_color, font=("Arial", 10, "bold"), bg=bg_color)
+    lbl_health.pack(pady=(0, 15))
 
+    # Rollback Button (if in recovery)
     if is_recovery:
         def show_rollback() -> None:
             messagebox.showinfo(
@@ -316,27 +338,102 @@ def main() -> int:
                 "Automated switching is blocked due to consecutive boot failures.\n\n"
                 f"Please run the rollback script in a terminal:\n\n{get_rollback_command()}"
             )
-        Button(root, text="View Rollback Instructions", fg="red", command=show_rollback).pack(pady=(0, 10))
+        btn_rollback = Button(
+            root,
+            text="View Rollback Instructions",
+            font=("Arial", 10, "bold"),
+            bg="#d93025",
+            fg="#ffffff",
+            activebackground="#b31412",
+            activeforeground="#ffffff",
+            relief="flat",
+            bd=0,
+            padx=15,
+            pady=6,
+            cursor="hand2",
+            command=show_rollback
+        )
+        btn_rollback.pack(pady=(0, 10))
+        
         switch_button = Button(
-            root, text=label_text, font=("Segoe UI", 14), width=28, height=2, state="disabled"
+            root,
+            text=label_text,
+            font=("Arial", 13, "bold"),
+            bg="#f1f3f4",
+            fg=sec_text_color,
+            relief="flat",
+            bd=0,
+            state="disabled",
+            width=28,
+            height=2
         )
     else:
+        # Hover effect functions for premium buttons
+        def on_enter(e):
+            switch_button.configure(bg=primary_hover)
+        def on_leave(e):
+            switch_button.configure(bg=primary_color)
+
         switch_button = Button(
-            root, text=label_text, font=("Segoe UI", 14), width=28, height=2, command=run_switch
+            root,
+            text=label_text,
+            font=("Arial", 13, "bold"),
+            bg=primary_color,
+            fg="#ffffff",
+            activebackground=primary_hover,
+            activeforeground="#ffffff",
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            command=run_switch,
+            width=28,
+            height=2
         )
+        switch_button.bind("<Enter>", on_enter)
+        switch_button.bind("<Leave>", on_leave)
 
-    switch_button.pack()
+    switch_button.pack(pady=10)
 
-    bottom_frame = Frame(root)
-    bottom_frame.pack(pady=(12, 0))
-    Checkbutton(bottom_frame, text="Allow reboot", variable=allow_reboot).pack(side="left", padx=(0, 20))
-    Button(bottom_frame, text="Edit Config", command=edit_config).pack(side="left")
+    # Bottom Actions Frame
+    bottom_frame = Frame(root, bg=bg_color)
+    bottom_frame.pack(pady=(15, 0))
 
-    status_label = Label(root, textvariable=status, font=("Segoe UI", 9), fg="gray")
-    status_label.pack(pady=(10, 0))
+    chk_reboot = Checkbutton(
+        bottom_frame,
+        text="Allow reboot",
+        variable=allow_reboot,
+        font=("Arial", 10),
+        fg=text_color,
+        bg=bg_color,
+        activebackground=bg_color,
+        activeforeground=text_color,
+        selectcolor=bg_color
+    )
+    chk_reboot.pack(side="left", padx=(0, 20))
+
+    btn_edit = Button(
+        bottom_frame,
+        text="Edit Config",
+        font=("Arial", 10, "bold"),
+        bg="#f1f3f4",
+        fg=text_color,
+        activebackground="#e8eaed",
+        activeforeground=text_color,
+        relief="flat",
+        bd=0,
+        padx=15,
+        pady=6,
+        cursor="hand2",
+        command=edit_config
+    )
+    btn_edit.pack(side="left")
+
+    # Status Labels
+    status_label = Label(root, textvariable=status, font=("Arial", 9), fg=sec_text_color, bg=bg_color)
+    status_label.pack(pady=(12, 0))
 
     details = StringVar(value="")
-    details_label = Label(root, textvariable=details, font=("Segoe UI", 8), fg="gray")
+    details_label = Label(root, textvariable=details, font=("Arial", 8), fg="gray", bg=bg_color)
     details_label.pack(pady=(2, 0))
 
     root.mainloop()

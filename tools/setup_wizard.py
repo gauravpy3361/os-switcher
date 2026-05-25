@@ -133,8 +133,17 @@ class SetupWizardApp:
 
         self.root = tkinter.Tk()
         self.root.title("OS Switcher Setup")
-        self.root.geometry("540x390")
         self.root.resizable(False, False)
+
+        # Center the window on screen
+        width = 540
+        height = 390
+        self.root.update_idletasks()
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
 
         icon_path = ROOT / "gui" / "os-switcher-logo.ico"
         if icon_path.exists():

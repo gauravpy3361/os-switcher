@@ -58,15 +58,17 @@ set -e
 HERE="$(dirname "$(readlink -f "$0")")"
 
 # AppImages are read-only.
-# We create a persistent config directory in the user's home config directory.
+# We create a persistent config directory in the user's home config directory with restricted permissions.
 PERSISTENT_CONFIG_DIR="$HOME/.config/os-switcher"
 mkdir -p "$PERSISTENT_CONFIG_DIR"
+chmod 700 "$PERSISTENT_CONFIG_DIR"
 PERSISTENT_CONFIG="$PERSISTENT_CONFIG_DIR/config.json"
 
-# Set up a writable sandbox in /tmp for python execution
+# Set up a writable sandbox in /tmp for python execution with restricted permissions
 SANDBOX="/tmp/os-switcher-app-$USER"
 rm -rf "$SANDBOX"
 mkdir -p "$SANDBOX"
+chmod 700 "$SANDBOX"
 
 # Copy execution files to writable sandbox
 cp -r "$HERE/opt/os-switcher/"* "$SANDBOX/"
@@ -78,8 +80,9 @@ if [ -f "/etc/os-switcher/config.json" ] && [ ! -f "$PERSISTENT_CONFIG" ]; then
     cp "/etc/os-switcher/config.json" "$PERSISTENT_CONFIG"
 fi
 
-# Symlink persistent config to the execution sandbox
+# Ensure correct permissions on config.json if it exists
 if [ -f "$PERSISTENT_CONFIG" ]; then
+    chmod 600 "$PERSISTENT_CONFIG"
     ln -sf "$PERSISTENT_CONFIG" "$SANDBOX/config.json"
 fi
 
@@ -89,6 +92,9 @@ cd "$SANDBOX"
 if [ ! -f "config.json" ]; then
     echo "Configuration config.json not found. Launching Setup Wizard..."
     python3 tools/setup_wizard.py --output "$PERSISTENT_CONFIG"
+    if [ -f "$PERSISTENT_CONFIG" ]; then
+        chmod 600 "$PERSISTENT_CONFIG"
+    fi
     ln -sf "$PERSISTENT_CONFIG" "$SANDBOX/config.json"
 fi
 
@@ -118,35 +124,10 @@ Terminal=false
 Comment=One-click dual-boot switching using UEFI boot targets
 EOF
 
-# 8. Generate placeholder icon
-echo "Generating placeholder icon..."
-python3 - << 'EOF'
-import zlib
-import struct
-
-def make_png(width, height):
-    raw_data = b""
-    for y in range(height):
-        raw_data += b"\x00" # Filter type 0
-        for x in range(width):
-            r = int(x * 255 / width)
-            g = int(y * 255 / height)
-            b = 255
-            raw_data += bytes([r, g, b])
-    png = b"\x89PNG\r\n\x1a\n"
-    ihdr_data = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
-    ihdr = b"IHDR" + ihdr_data
-    png += struct.pack(">I", len(ihdr_data)) + ihdr + struct.pack(">I", zlib.crc32(ihdr))
-    idat_data = zlib.compress(raw_data)
-    idat = b"IDAT" + idat_data
-    png += struct.pack(">I", len(idat_data)) + idat + struct.pack(">I", zlib.crc32(idat))
-    iend = b"IEND"
-    png += struct.pack(">I", 0) + iend + struct.pack(">I", zlib.crc32(iend))
-    return png
-
-with open("AppDir/os-switcher.png", "wb") as f:
-    f.write(make_png(64, 64))
-EOF
+# 8. Copy premium icon assets
+echo "Copying premium icon assets..."
+cp "$REPO_ROOT/gui/os-switcher-logo.png" "$APP_DIR/os-switcher.png"
+cp "$REPO_ROOT/gui/os-switcher-logo.svg" "$APP_DIR/os-switcher.svg"
 
 # 9. Build AppImage to dist/
 mkdir -p "$REPO_ROOT/dist"
