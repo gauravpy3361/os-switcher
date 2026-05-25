@@ -161,12 +161,22 @@ def main() -> int:
     y = (screen_height - height) // 2
     root.geometry(f"{width}x{height}+{x}+{y}")
     
-    icon_path = ROOT / "gui" / "os-switcher-logo.ico"
-    if icon_path.exists():
-        try:
-            root.iconbitmap(str(icon_path))
-        except Exception as exc:
-            print(f"[os-switcher] WARNING: Could not set window icon: {exc}", file=sys.stderr)
+    import sys as _sys
+    _sys.modules['platform'] = __import__('platform')
+    _sys.modules['tkinter'] = __import__('tkinter')
+    
+    if _sys.modules['platform'].system().lower() == "windows":
+        icon_path = ROOT / "gui" / "os-switcher-logo.ico"
+        if icon_path.exists():
+            try: root.iconbitmap(str(icon_path))
+            except Exception: pass
+    else:
+        icon_path = ROOT / "gui" / "os-switcher-logo.png"
+        if icon_path.exists():
+            try:
+                img = _sys.modules['tkinter'].PhotoImage(file=str(icon_path))
+                root.iconphoto(True, img)
+            except Exception: pass
 
     is_recovery = (state_dir / "recovery-mode.json").exists()
     is_pending = (state_dir / "pending-transition.json").exists()
