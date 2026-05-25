@@ -133,17 +133,7 @@ def main() -> int:
                 print(f"[os-switcher] UAC elevation request failed: {e}", file=sys.stderr)
             sys.exit(0)
 
-    if platform.system().lower() == "linux":
-        if os.geteuid() != 0:
-            print("ERROR: This GUI must be run as root.", file=sys.stderr)
-            print("Please run with sudo: sudo python3 os_switcher_gui.py", file=sys.stderr)
-            try:
-                root = Tk()
-                root.withdraw()
-                messagebox.showerror("OS Switcher", "Please run with sudo:\nsudo python3 os_switcher_gui.py")
-            except Exception:
-                pass
-            return 1
+
 
     try:
         raw_config = load_config()

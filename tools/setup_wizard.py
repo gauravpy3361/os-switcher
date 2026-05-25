@@ -31,7 +31,7 @@ def current_platform() -> str:
     return system
 
 
-def detect_efi_entries(os_name: str) -> list[BootEntry]:
+def detect_efi_entries(os_name: str, gui_mode: bool = False) -> list[BootEntry]:
     if os_name == "windows":
         try:
             completed = subprocess.run(
@@ -52,23 +52,46 @@ def detect_efi_entries(os_name: str) -> list[BootEntry]:
             sys.exit(1)
     elif os_name == "linux":
         try:
+            import os
+            import shutil
+
+            cmd = ["efibootmgr", "-v"]
+            if hasattr(os, "geteuid") and os.geteuid() != 0:
+                if gui_mode:
+                    if not shutil.which("pkexec"):
+                        raise RuntimeError(
+                            "Polkit ('pkexec') is required for graphical privilege elevation but is missing. "
+                            "Please run in a terminal with sudo, or install polkit."
+                        )
+                    cmd = ["pkexec"] + cmd
+                else:
+                    if shutil.which("sudo"):
+                        cmd = ["sudo"] + cmd
+
             completed = subprocess.run(
-                ["efibootmgr", "-v"],
+                cmd,
                 capture_output=True,
                 text=True,
                 check=False,
             )
             if completed.returncode != 0:
-                print(f"Error: efibootmgr command failed (exit code {completed.returncode}).", file=sys.stderr)
-                print(f"Error details: {completed.stderr.strip()}", file=sys.stderr)
+                err_msg = f"efibootmgr command failed (exit code {completed.returncode}).\nDetails: {completed.stderr.strip() or completed.stdout.strip()}"
+                if gui_mode:
+                    raise RuntimeError(err_msg)
+                print(f"Error: {err_msg}", file=sys.stderr)
                 sys.exit(1)
             entries = parse_linux_efi_entries(completed.stdout)
             return entries
         except Exception as exc:
+            if gui_mode:
+                raise exc
             print(f"Error: Failed to execute efibootmgr: {exc}", file=sys.stderr)
             sys.exit(1)
     else:
-        print(f"Error: Unsupported operating system platform '{os_name}'.", file=sys.stderr)
+        err_msg = f"Unsupported operating system platform '{os_name}'."
+        if gui_mode:
+            raise RuntimeError(err_msg)
+        print(f"Error: {err_msg}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -222,7 +245,7 @@ class SetupWizardApp:
         def do_detect():
             try:
                 # We can reuse detect_efi_entries but let's capture SystemExit if it fails
-                detected = detect_efi_entries(self.os_name)
+                detected = detect_efi_entries(self.os_name, gui_mode=True)
                 # Filter empty and truncate labels
                 self.entries = []
                 for e in detected:
@@ -780,16 +803,6 @@ def main() -> int:
         if not is_admin:
             print("ERROR: This wizard must be run as Administrator.", file=sys.stderr)
             print("Right-click PowerShell and select 'Run as Administrator', then try again.", file=sys.stderr)
-            sys.exit(1)
-    elif os_name == "linux":
-        try:
-            import os
-            is_root = os.geteuid() == 0
-        except Exception:
-            is_root = False
-        if not is_root:
-            print("ERROR: This wizard must be run as root.", file=sys.stderr)
-            print("Run: sudo python3 tools/setup_wizard.py", file=sys.stderr)
             sys.exit(1)
 
     parser = argparse.ArgumentParser(description="OS Switcher Setup Wizard")

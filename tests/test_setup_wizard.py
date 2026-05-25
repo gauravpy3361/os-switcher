@@ -233,16 +233,48 @@ def test_setup_wizard_requires_admin_on_windows(monkeypatch: pytest.MonkeyPatch)
         assert excinfo.value.code == 1
 
 
-def test_setup_wizard_requires_root_on_linux(monkeypatch: pytest.MonkeyPatch) -> None:
-    with patch("tools.setup_wizard.platform.system", return_value="Linux"), \
-         patch("os.geteuid", return_value=1000, create=True):
-        
-        args = ["setup_wizard.py"]
-        monkeypatch.setattr(sys, "argv", args)
-        
-        with pytest.raises(SystemExit) as excinfo:
-            main()
-        assert excinfo.value.code == 1
+def test_detect_efi_entries_linux_non_root_gui_with_pkexec() -> None:
+    mock_run = MagicMock()
+    mock_run.returncode = 0
+    mock_run.stdout = "BootCurrent: 0001\nBoot0001* Fedora\n"
+    mock_run.stderr = ""
+
+    with patch("tools.setup_wizard.subprocess.run", return_value=mock_run) as mock_sub_run, \
+         patch("os.geteuid", return_value=1000, create=True), \
+         patch("shutil.which", side_effect=lambda cmd: "/usr/bin/pkexec" if cmd == "pkexec" else None):
+        entries = detect_efi_entries("linux", gui_mode=True)
+
+    assert len(entries) == 1
+    mock_sub_run.assert_called_once()
+    # Should prepend pkexec
+    args = mock_sub_run.call_args[0][0]
+    assert args == ["pkexec", "efibootmgr", "-v"]
+
+
+def test_detect_efi_entries_linux_non_root_gui_missing_pkexec() -> None:
+    with patch("os.geteuid", return_value=1000, create=True), \
+         patch("shutil.which", return_value=None):
+        with pytest.raises(RuntimeError) as excinfo:
+            detect_efi_entries("linux", gui_mode=True)
+        assert "Polkit ('pkexec') is required" in str(excinfo.value)
+
+
+def test_detect_efi_entries_linux_non_root_cli_with_sudo() -> None:
+    mock_run = MagicMock()
+    mock_run.returncode = 0
+    mock_run.stdout = "BootCurrent: 0001\nBoot0001* Fedora\n"
+    mock_run.stderr = ""
+
+    with patch("tools.setup_wizard.subprocess.run", return_value=mock_run) as mock_sub_run, \
+         patch("os.geteuid", return_value=1000, create=True), \
+         patch("shutil.which", side_effect=lambda cmd: "/usr/bin/sudo" if cmd == "sudo" else None):
+        entries = detect_efi_entries("linux", gui_mode=False)
+
+    assert len(entries) == 1
+    mock_sub_run.assert_called_once()
+    # Should prepend sudo
+    args = mock_sub_run.call_args[0][0]
+    assert args == ["sudo", "efibootmgr", "-v"]
 
 
 def test_setup_wizard_filters_and_truncates_labels(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
